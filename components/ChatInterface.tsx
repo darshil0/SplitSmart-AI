@@ -1,19 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { Send, Bot, User as UserIcon, Sparkles } from 'lucide-react';
+import { Send, Bot, User as UserIcon, Sparkles, Undo2, Redo2 } from 'lucide-react';
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
   isProcessing: boolean;
   disabled: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   messages, 
   onSendMessage, 
   isProcessing,
-  disabled 
+  disabled,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -49,6 +57,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <span className="text-[10px] text-slate-400 font-bold uppercase">Online & Thinking</span>
             </div>
           </div>
+        </div>
+
+        {/* Undo/Redo Controls */}
+        <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+          <button 
+            onClick={onUndo} 
+            disabled={!canUndo || disabled}
+            className={`p-1.5 rounded-lg transition-all ${canUndo && !disabled ? 'text-white hover:bg-slate-700' : 'text-slate-600 opacity-50 cursor-not-allowed'}`}
+            title="Undo assignment change"
+          >
+            <Undo2 size={16} />
+          </button>
+          <div className="w-px h-4 bg-slate-700 mx-0.5"></div>
+          <button 
+            onClick={onRedo} 
+            disabled={!canRedo || disabled}
+            className={`p-1.5 rounded-lg transition-all ${canRedo && !disabled ? 'text-white hover:bg-slate-700' : 'text-slate-600 opacity-50 cursor-not-allowed'}`}
+            title="Redo assignment change"
+          >
+            <Redo2 size={16} />
+          </button>
         </div>
       </div>
 

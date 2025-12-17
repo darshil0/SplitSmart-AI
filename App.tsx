@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AssignmentMap, ChatMessage, ReceiptData, DistributionMethod, ItemOverridesMap, ReceiptItem } from './types';
 import { parseReceiptImage, processChatCommand } from './services/geminiService';
 import ReceiptDisplay from './components/ReceiptDisplay';
@@ -11,6 +11,9 @@ import { Split, User, HelpCircle, Receipt as ReceiptIcon, MessageSquare, PieChar
 const App: React.FC = () => {
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [assignments, setAssignments] = useState<AssignmentMap>({});
+  const [pastAssignments, setPastAssignments] = useState<AssignmentMap[]>([]);
+  const [futureAssignments, setFutureAssignments] = useState<AssignmentMap[]>([]);
+  
   const [itemOverrides, setItemOverrides] = useState<ItemOverridesMap>({});
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -47,6 +50,32 @@ const App: React.FC = () => {
     return Array.from(people).sort();
   }, [assignments, userName]);
 
+  const pushToHistory = useCallback((newMap: AssignmentMap) => {
+    setPastAssignments(prev => [...prev, assignments]);
+    setAssignments(newMap);
+    setFutureAssignments([]);
+  }, [assignments]);
+
+  const handleUndo = useCallback(() => {
+    if (pastAssignments.length === 0) return;
+    const previous = pastAssignments[pastAssignments.length - 1];
+    const newPast = pastAssignments.slice(0, -1);
+    
+    setFutureAssignments(prev => [assignments, ...prev]);
+    setAssignments(previous);
+    setPastAssignments(newPast);
+  }, [assignments, pastAssignments]);
+
+  const handleRedo = useCallback(() => {
+    if (futureAssignments.length === 0) return;
+    const next = futureAssignments[0];
+    const newFuture = futureAssignments.slice(1);
+    
+    setPastAssignments(prev => [...prev, assignments]);
+    setAssignments(next);
+    setFutureAssignments(newFuture);
+  }, [assignments, futureAssignments]);
+
   const handleNameSubmit = () => {
     if (userName.trim() && !isNameSet) {
       setMessages(prev => [...prev, {
@@ -76,6 +105,8 @@ const App: React.FC = () => {
           const data = await parseReceiptImage(base64String);
           setReceiptData(data);
           setAssignments({});
+          setPastAssignments([]);
+          setFutureAssignments([]);
           setItemOverrides({});
           setDistributionMethod('PROPORTIONAL');
           
@@ -86,7 +117,6 @@ const App: React.FC = () => {
             timestamp: Date.now()
           }]);
           
-          // On mobile, switch to receipt view automatically if not there
           setActiveMobileTab('receipt');
         } catch (error) {
           console.error(error);
@@ -116,7 +146,7 @@ const App: React.FC = () => {
   };
 
   const handleUpdateAssignments = (itemId: string, names: string[]) => {
-    setAssignments(prev => ({ ...prev, [itemId]: names }));
+    pushToHistory({ ...assignments, [itemId]: names });
   };
 
   const handleSendMessage = async (text: string) => {
@@ -126,7 +156,7 @@ const App: React.FC = () => {
     setIsProcessing(true);
     try {
       const { assignments: newAssignments, reply } = await processChatCommand(receiptData, assignments, text, userName);
-      setAssignments(newAssignments);
+      pushToHistory(newAssignments);
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: reply, timestamp: Date.now() }]);
     } catch (error) {
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: "I'm having trouble understanding that. Try being more specific!", timestamp: Date.now() }]);
@@ -139,7 +169,6 @@ const App: React.FC = () => {
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-inter">
       {showWalkthrough && <WalkthroughModal onClose={() => setShowWalkthrough(false)} />}
       
-      {/* Enhanced Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
@@ -177,10 +206,8 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Layout - Responsive */}
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         
-        {/* Mobile Tabbed Navigation - Only visible on small screens */}
         <div className="lg:hidden flex bg-white border-b border-slate-200 p-1">
           <button 
             onClick={() => setActiveMobileTab('receipt')}
@@ -202,7 +229,6 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Left Pane - Receipt */}
         <div className={`flex-1 lg:w-1/2 p-4 sm:p-6 overflow-y-auto border-r border-slate-200 bg-slate-50/30 ${activeMobileTab !== 'receipt' ? 'hidden lg:block' : 'block'}`}>
            {!receiptData ? (
              <div className="h-full flex flex-col justify-center max-w-xl mx-auto w-full">
@@ -238,23 +264,22 @@ const App: React.FC = () => {
            )}
         </div>
 
-        {/* Right Pane - Chat & Summary (Mobile conditional rendering) */}
         <div className={`lg:w-1/2 flex flex-col bg-white overflow-hidden ${activeMobileTab === 'receipt' ? 'hidden lg:flex' : 'flex'}`}>
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Desktop: Grid for both. Mobile: Switch based on tab */}
             <div className="flex-1 lg:grid lg:grid-rows-2 h-full overflow-hidden">
-              
-              {/* Chat Section */}
               <div className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === 'summary' ? 'hidden lg:flex' : 'flex'}`}>
                  <ChatInterface 
                    messages={messages} 
                    onSendMessage={handleSendMessage}
                    isProcessing={isProcessing}
                    disabled={!receiptData || isUploading}
+                   onUndo={handleUndo}
+                   onRedo={handleRedo}
+                   canUndo={pastAssignments.length > 0}
+                   canRedo={futureAssignments.length > 0}
                  />
               </div>
               
-              {/* Summary Section */}
               <div className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
                 <SummaryDisplay 
                   receiptData={receiptData} 
@@ -268,7 +293,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Dynamic Overlay for uploading state */}
       {isUploading && (
         <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
           <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center max-w-xs animate-in zoom-in-95">

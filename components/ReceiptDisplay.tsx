@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ReceiptData, AssignmentMap, DistributionMethod, ItemOverridesMap, ReceiptItem } from '../types';
-import { User, Receipt as ReceiptIcon, Settings2, Edit3, Check, X, Plus, Users } from 'lucide-react';
+import { User, Receipt as ReceiptIcon, Settings2, Edit3, Check, X, Plus, Users, Percent } from 'lucide-react';
 
 interface ReceiptDisplayProps {
   data: ReceiptData | null;
@@ -32,7 +32,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
   const [splittingItemId, setSplittingItemId] = useState<string | null>(null);
   const [newPersonName, setNewPersonName] = useState('');
 
-  if (isLoading) return null; // Handled by App.tsx global overlay
+  if (isLoading) return null;
 
   if (!data) return null;
 
@@ -74,6 +74,26 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
       }
       setNewPersonName('');
     }
+  };
+
+  const handleOverrideChange = (itemId: string, field: 'tax' | 'tip', value: string) => {
+    const numValue = value === '' ? NaN : parseFloat(value);
+    const newOverrides = { ...itemOverrides };
+    
+    if (!newOverrides[itemId]) {
+      newOverrides[itemId] = {};
+    }
+
+    if (isNaN(numValue)) {
+      delete newOverrides[itemId][field];
+      if (Object.keys(newOverrides[itemId]).length === 0) {
+        delete newOverrides[itemId];
+      }
+    } else {
+      newOverrides[itemId][field] = numValue;
+    }
+    
+    onOverrideChange(newOverrides);
   };
 
   return (
@@ -250,6 +270,42 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Manual Overrides for Tax/Tip */}
+                {distributionMethod === 'MANUAL' && (
+                  <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap gap-3 animate-in slide-in-from-top-1 duration-200">
+                    <div className="flex-1 min-w-[120px]">
+                      <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Specific Tax</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">{data.currency}</span>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          min="0"
+                          placeholder="Auto-calc"
+                          className="w-full pl-6 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          value={override?.tax ?? ''}
+                          onChange={(e) => handleOverrideChange(item.id, 'tax', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-[120px]">
+                      <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Specific Tip</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">{data.currency}</span>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          min="0"
+                          placeholder="Auto-calc"
+                          className="w-full pl-6 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          value={override?.tip ?? ''}
+                          onChange={(e) => handleOverrideChange(item.id, 'tip', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -284,6 +340,11 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                 </button>
               ))}
             </div>
+            <p className="mt-3 text-[10px] text-slate-500 italic px-1">
+              {distributionMethod === 'MANUAL' 
+                ? 'Tip: You can now set exact tax/tip amounts per item above. Residual amounts split proportionally.' 
+                : 'Tax and tip are distributed based on your selected strategy.'}
+            </p>
           </div>
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { ReceiptData, AssignmentMap, PersonSummary, DistributionMethod, ItemOverridesMap } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
@@ -26,61 +25,110 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
       if (!peopleMap[name]) peopleMap[name] = { name, items: [], subtotal: 0, taxShare: 0, tipShare: 0, totalOwed: 0 };
     };
 
-    let manualTaxTotal = 0;
-    let manualTipTotal = 0;
+    let totalManualTax = 0;
+    let totalManualTip = 0;
     let subtotalOfItemsWithNoTaxOverride = 0;
     let subtotalOfItemsWithNoTipOverride = 0;
 
+    // First pass: Track subtotal and assigned items
+    receiptData.items.forEach((item) => {
+      const override = itemOverrides[item.id];
+      if (distributionMethod === 'MANUAL') {
+        if (override?.tax !== undefined) totalManualTax += override.tax;
+        else subtotalOfItemsWithNoTaxOverride += item.price;
+        
+        if (override?.tip !== undefined) totalManualTip += override.tip;
+        else subtotalOfItemsWithNoTipOverride += item.price;
+      }
+    });
+
+    const remainingTaxPool = Math.max(0, receiptData.tax - totalManualTax);
+    const remainingTipPool = Math.max(0, receiptData.tip - totalManualTip);
+
+    // Second pass: Calculate shares for each person
     receiptData.items.forEach((item) => {
       const assignedPeople = assignments[item.id] || [];
       const splitCount = assignedPeople.length;
       const override = itemOverrides[item.id];
 
-      if (distributionMethod === 'MANUAL') {
-        if (override?.tax !== undefined) manualTaxTotal += override.tax;
-        else subtotalOfItemsWithNoTaxOverride += item.price;
-        if (override?.tip !== undefined) manualTipTotal += override.tip;
-        else subtotalOfItemsWithNoTipOverride += item.price;
-      }
-
       if (splitCount > 0) {
         const costPerPerson = item.price / splitCount;
+        
+        // Calculate tax/tip for this specific item
+        let itemTax = 0;
+        let itemTip = 0;
+
+        if (distributionMethod === 'MANUAL') {
+          // If manual override exists, use it
+          if (override?.tax !== undefined) {
+            itemTax = override.tax;
+          } else if (subtotalOfItemsWithNoTaxOverride > 0) {
+            // Otherwise, get a proportional share of the remaining pool
+            itemTax = (item.price / subtotalOfItemsWithNoTaxOverride) * remainingTaxPool;
+          }
+
+          if (override?.tip !== undefined) {
+            itemTip = override.tip;
+          } else if (subtotalOfItemsWithNoTipOverride > 0) {
+            itemTip = (item.price / subtotalOfItemsWithNoTipOverride) * remainingTipPool;
+          }
+        }
+
         assignedPeople.forEach((person) => {
           initPerson(person);
-          peopleMap[person].items.push({ description: item.description + (splitCount > 1 ? ` (1/${splitCount})` : ''), amount: costPerPerson });
+          peopleMap[person].items.push({ 
+            description: item.description + (splitCount > 1 ? ` (1/${splitCount})` : ''), 
+            amount: costPerPerson 
+          });
           peopleMap[person].subtotal += costPerPerson;
+          
           if (distributionMethod === 'MANUAL') {
-             if (override?.tax !== undefined) peopleMap[person].taxShare += override.tax / splitCount;
-             if (override?.tip !== undefined) peopleMap[person].tipShare += override.tip / splitCount;
+            peopleMap[person].taxShare += itemTax / splitCount;
+            peopleMap[person].tipShare += itemTip / splitCount;
           }
         });
       }
     });
 
+    // Handle Unassigned items
     const assignedItemIds = new Set(Object.keys(assignments).filter(k => assignments[k].length > 0));
     const unassignedItems = receiptData.items.filter(item => !assignedItemIds.has(item.id));
     if (unassignedItems.length > 0) {
         initPerson('Unassigned');
         unassignedItems.forEach(item => {
+            const override = itemOverrides[item.id];
             peopleMap['Unassigned'].items.push({ description: item.description, amount: item.price });
             peopleMap['Unassigned'].subtotal += item.price;
+            
+            if (distributionMethod === 'MANUAL') {
+              if (override?.tax !== undefined) {
+                peopleMap['Unassigned'].taxShare += override.tax;
+              } else if (subtotalOfItemsWithNoTaxOverride > 0) {
+                peopleMap['Unassigned'].taxShare += (item.price / subtotalOfItemsWithNoTaxOverride) * remainingTaxPool;
+              }
+
+              if (override?.tip !== undefined) {
+                peopleMap['Unassigned'].tipShare += override.tip;
+              } else if (subtotalOfItemsWithNoTipOverride > 0) {
+                peopleMap['Unassigned'].tipShare += (item.price / subtotalOfItemsWithNoTipOverride) * remainingTipPool;
+              }
+            }
         });
     }
 
     const peopleList = Object.values(peopleMap);
-    const validSubtotal = receiptData.subtotal || 1;
-    const remainingTax = Math.max(0, receiptData.tax - manualTaxTotal);
-    const remainingTip = Math.max(0, receiptData.tip - manualTipTotal);
-    const peopleCountInMemo = peopleList.filter(p => p.name !== 'Unassigned').length;
+    const totalAssignedSubtotal = receiptData.subtotal || 1;
+    const realPeopleCount = peopleList.filter(p => p.name !== 'Unassigned').length;
 
+    // Third pass: Handle PROPORTIONAL and EQUAL distribution methods
     peopleList.forEach((person) => {
       if (distributionMethod === 'PROPORTIONAL') {
-        const shareRatio = person.subtotal / validSubtotal;
+        const shareRatio = person.subtotal / totalAssignedSubtotal;
         person.taxShare = receiptData.tax * shareRatio;
         person.tipShare = receiptData.tip * shareRatio;
       } else if (distributionMethod === 'EQUAL') {
         if (person.name !== 'Unassigned') {
-          const count = peopleCountInMemo > 0 ? peopleCountInMemo : 1; 
+          const count = realPeopleCount > 0 ? realPeopleCount : 1; 
           person.taxShare = receiptData.tax / count;
           person.tipShare = receiptData.tip / count;
         }
@@ -91,7 +139,6 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     return peopleList.sort((a, b) => b.totalOwed - a.totalOwed);
   }, [receiptData, assignments, distributionMethod, itemOverrides]);
 
-  // Fix: Calculate realPeopleCount from the summary array to be accessible in the render scope
   const realPeopleCount = useMemo(() => 
     summary.filter(p => p.name !== 'Unassigned').length, 
     [summary]

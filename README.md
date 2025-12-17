@@ -1,39 +1,6 @@
-# SplitSmart AI (v1.2.0) ✅
+# SplitSmart AI (v1.2.0) 🚀
 
-A modern, split-screen bill splitting application powered by Google's Gemini 1.5 Pro model. Upload a receipt image, and use natural language to assign items to friends.
-
-## 🚀 New Features (v1.2.0)
-
-- **Robust Undo/Redo System**: Full history tracking with unlimited steps
-- **Production-Ready State Management**: Single source of truth prevents data loss
-- **Enhanced Mobile Experience**: Perfect responsive tabs and layouts
-- **Auto-Save & Restore**: Latest split loads automatically on refresh
-- **Improved Error Handling**: Graceful fallbacks for all edge cases
-- **Performance Optimizations**: `useCallback`, `useMemo`, `useRef` throughout
-
-## 🔧 Fixes & Updates (v1.2.0)
-
-- **Fixed History Management**:
-  - Single `history[]` array replaces fragmented `pastAssignments`/`futureAssignments`
-  - `historyIndexRef` enables seamless undo/redo without re-renders
-  - Complete state snapshots (assignments + splits + receipt data)
-
-- **Patched Gemini API Integration** [Previous v1.1.0]:
-  - Corrected `generateContent` format: `[imagePart]` instead of `{contents: [...]}`
-  - Added `responseSchema` for guaranteed JSON output
-  - Dynamic MIME type detection (png/jpeg/webp)
-  - Temperature control for consistent results
-
-- **UI/UX Polish**:
-  - Enhanced loading states with smooth animations
-  - Better mobile tab navigation with icons
-  - Improved Test Lab modal with proper sizing
-  - Gradient branding and micro-interactions
-
-- **Reliability**:
-  - localStorage try-catch prevents crashes
-  - File type validation before upload
-  - Null checks and disabled states prevent race conditions
+A modern, split-screen bill splitting application powered by Google's Gemini 1.5 Pro model. Upload a receipt image and use natural language to assign items to friends.
 
 ## ✨ Features
 
@@ -42,37 +9,52 @@ A modern, split-screen bill splitting application powered by Google's Gemini 1.5
 - **Smart Pronoun Resolution**: Enter name → AI understands "I/me/my"
 - **Real-time Visualizations**: Pie charts + detailed per-person breakdowns
 - **Flexible Tax/Tip Splitting**:
-  | Method | Description |
-  |--------|-------------|
+  | Method       | Description                          |
+  |--------------|--------------------------------------|
   | **PROPORTIONAL** | Based on each person's total item cost |
-  | **EQUAL** | Divided evenly among participants |
+  | **EQUAL**    | Divided evenly among participants    |
+  | **MANUAL**   | Custom tax/tip per item              |
 
-## 🛠️ Technologies
+## 🚀 What's New in v1.2.0
+
+### ✨ New Features
+- **Robust Undo/Redo**: Full history tracking with unlimited steps
+- **Production State Management**: Single source of truth, no data loss
+- **Enhanced Mobile UX**: Perfect responsive tabs + touch gestures
+- **Auto-Save & Restore**: Latest split loads on refresh
+- **Performance**: `useCallback`, `useMemo`, `useRef` everywhere
+
+### 🔧 Key Fixes
+- **Fixed History System**: Single `history[]` array + `historyIndexRef`
+- **Patched Gemini API**: Proper `generateContent([imagePart])` + `responseSchema`
+- **UI Polish**: Smooth loading states, mobile tabs, gradient branding
+
+## 🛠️ Tech Stack
 
 ```
 Frontend: React 19 + TypeScript + Vite + Tailwind CSS
-AI: Google Generative AI SDK (@google/generative-ai)
-Icons: Lucide React
-Charts: Recharts
-State: Custom history stack (no external libs needed)
-Build: Prettier + ESLint
+AI:      @google/generative-ai (Gemini 1.5 Pro)
+Charts:  Recharts
+Icons:   Lucide React
+State:   Custom history stack (no external libs)
+Build:   Prettier + ESLint + Vitest
 ```
 
-## 🚀 Quick Setup
+## 🎯 Quick Start
 
-```
+```bash
 # Clone & Install
-git clone <repo> split-smart-ai
+git clone <your-repo> split-smart-ai
 cd split-smart-ai
 npm install
 
-# Add your Gemini API key
-echo "VITE_API_KEY=your_gemini_api_key_here" > .env
+# Add Gemini API Key
+echo "VITE_GEMINI_API_KEY=your_gemini_api_key_here" > .env
 
 # Development
 npm run dev
 
-# Production Build
+# Build for Production
 npm run build
 ```
 
@@ -80,17 +62,63 @@ npm run build
 
 ```
 "Tom had the burger and fries"
-"Sarah and I shared the pizza"
+"Sarah and I shared the pizza" 
 "Split appetizers between everyone"
 "Remove Tom from the drinks"
 "David had the steak"
 ```
 
-## 🎯 Why SplitSmart?
+## 🎮 Usage Flow
 
-✅ **Zero Setup** - Single image upload starts everything  
-✅ **100% Accurate Parsing** - Schema-enforced JSON output  
-✅ **Mobile-First** - Perfect on phone/tablet/desktop  
-✅ **No Data Loss** - Auto-saves every change  
-✅ **Privacy-First** - Local storage, no cloud sync needed  
+```
+1. 📸 Upload receipt image → AI extracts items instantly
+2. 💬 Chat: "Tom had the burger" → Auto-assigns items
+3. 🎨 Review pie chart + per-person breakdowns
+4. 💾 Auto-saves every change (localStorage)
+5. 🔄 Undo/Redo with Ctrl+Z / Ctrl+Y
+```
 
+## 🌐 Deployment
+
+```bash
+# Vercel (Recommended)
+npm i -g vercel
+vercel --prod
+
+# Netlify
+npm run build
+# Drag `dist/` to Netlify deploy
+```
+
+## 📊 Why SplitSmart?
+
+| ✅ Zero Setup | Single image upload starts everything |
+|--------------|---------------------------------------|
+| ✅ 100% Accurate | Schema-enforced JSON output |
+| ✅ Mobile-First | Perfect on iPhone/Android/Desktop |
+| ✅ No Data Loss | Auto-saves every interaction |
+| ✅ Privacy-First | Local storage only |
+
+## 🤝 Contributing
+
+```bash
+# Run tests
+npm run test
+
+# Lint & Format
+npm run lint
+npm run format
+
+# Type check
+npm run type-check
+```
+
+## 📄 License
+
+MIT License - Free for personal & commercial use.
+
+***
+
+**Built with ❤️ by Darshil for effortless group bill splitting**  
+
+*Made with React 19 + Gemini 1.5 Pro (2025)*

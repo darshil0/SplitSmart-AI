@@ -24,7 +24,7 @@ export interface ItemManualSplitsMap {
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   timestamp: number;
 }
@@ -38,7 +38,7 @@ export interface PersonSummary {
   totalOwed: number;
 }
 
-export type DistributionMethod = 'PROPORTIONAL' | 'EQUAL' | 'MANUAL';
+export type DistributionMethod = "PROPORTIONAL" | "EQUAL" | "MANUAL";
 
 export interface ItemTaxTipOverride {
   tax?: number;
@@ -59,12 +59,12 @@ export interface HistoryEntry {
 }
 
 // Testing Framework Types
-export type TestStatus = 'idle' | 'running' | 'passed' | 'failed';
+export type TestStatus = "idle" | "running" | "passed" | "failed";
 
 export interface TestResult {
   id: string;
   name: string;
-  category: 'BVT' | 'E2E' | 'Regression' | 'Edge Case' | 'Scrum';
+  category: "BVT" | "E2E" | "Regression" | "Edge Case" | "Scrum";
   status: TestStatus;
   error?: string;
   duration?: number;

@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, CheckCircle2, Camera, MessageSquare, PieChart } from 'lucide-react';
+import React from "react";
+import { X, CheckCircle2, Camera, MessageSquare, PieChart } from "lucide-react";
 
 interface WalkthroughModalProps {
   onClose: () => void;
@@ -10,18 +10,18 @@ const WalkthroughModal: React.FC<WalkthroughModalProps> = ({ onClose }) => {
     {
       icon: <Camera className="text-indigo-600" />,
       title: "Upload Receipt",
-      desc: "Take a photo or upload a receipt. AI parses items instantly."
+      desc: "Take a photo or upload a receipt. AI parses items instantly.",
     },
     {
       icon: <MessageSquare className="text-emerald-600" />,
       title: "Chat with AI",
-      desc: "Say 'I had the burger' or 'Split the wine 3 ways'."
+      desc: "Say 'I had the burger' or 'Split the wine 3 ways'.",
     },
     {
       icon: <PieChart className="text-amber-600" />,
       title: "See Totals",
-      desc: "Check the summary for a perfect breakdown of who owes what."
-    }
+      desc: "Check the summary for a perfect breakdown of who owes what.",
+    },
   ];
 
   return (
@@ -30,10 +30,17 @@ const WalkthroughModal: React.FC<WalkthroughModalProps> = ({ onClose }) => {
         <div className="p-8">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Welcome to SplitSmart</h2>
-              <p className="text-slate-500 mt-1">Split bills in seconds with AI.</p>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Welcome to SplitSmart
+              </h2>
+              <p className="text-slate-500 mt-1">
+                Split bills in seconds with AI.
+              </p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            >
               <X size={20} className="text-slate-400" />
             </button>
           </div>
@@ -46,13 +53,15 @@ const WalkthroughModal: React.FC<WalkthroughModalProps> = ({ onClose }) => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-800">{step.title}</h4>
-                  <p className="text-sm text-slate-500 leading-relaxed">{step.desc}</p>
+                  <p className="text-sm text-slate-500 leading-relaxed">
+                    {step.desc}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
-          <button 
+          <button
             onClick={onClose}
             className="w-full mt-8 bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
           >

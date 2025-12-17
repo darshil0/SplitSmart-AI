@@ -1,7 +1,0 @@
-{
-  "name": "SplitSmart AI",
-  "description": "Premium split-screen bill splitting app powered by Gemini 3 Pro. Mobile-first design, natural language processing, and real-time breakdowns.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}

@@ -1,31 +1,27 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ReceiptData, AssignmentMap } from "../types";
 
-// Helper to get AI instance
-const getAiClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const API_KEY = import.meta.env.VITE_API_KEY as string;
+
+if (!API_KEY) {
+  alert("VITE_API_KEY is not defined. Please set it in your .env file.");
+  throw new Error("VITE_API_KEY is not defined.");
+}
+
+const ai = new GoogleGenerativeAI(API_KEY);
+
+const generationConfig = {
+  responseMimeType: "application/json",
 };
 
 // 1. Parse Receipt Image
-export const parseReceiptImage = async (base64Image: string): Promise<ReceiptData> => {
-  const ai = getAiClient();
-  
-  // Clean base64 string if it contains data URI prefix
-  const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-pro-preview",
-    contents: {
-      parts: [
-        {
-          inlineData: {
-            mimeType: "image/png",
-            data: cleanBase64,
-          },
-        },
-        {
-          text: `You are a world-class receipt parsing agent. Your goal is to extract structured data from this receipt with 100% accuracy.
+export const parseReceiptImage = async (
+  base64Image: string,
+): Promise<ReceiptData> => {
+  const model = ai.getGenerativeModel({
+    model: "gemini-1.5-pro-latest",
+    generationConfig,
+    systemInstruction: `You are a world-class receipt parsing agent. Your goal is to extract structured data from this receipt with 100% accuracy.
 
 CONTEXT & EDGE CASES:
 1. COMPLEX LAYOUTS: Items might have descriptions spanning multiple lines. Prices are usually on the far right. Quantities might be on the left or in the middle.
@@ -45,56 +41,43 @@ JSON SCHEMA REQUIREMENTS:
 - 'currency': The currency symbol ($, €, £, etc.). If not found, use "$".
 - 'subtotal', 'tax', 'tip', 'total': Numeric values.
 
-Double-check the math: (sum of item prices) should roughly equal subtotal. total should equal subtotal + tax + tip.`
-        },
-      ],
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          items: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.STRING, description: "Unique identifier for the item." },
-                description: { type: Type.STRING, description: "Clear description of the item." },
-                price: { type: Type.NUMBER, description: "The total price for this line item (qty * unit price)." },
-                quantity: { type: Type.NUMBER, description: "Number of units purchased." },
-              },
-              required: ["id", "description", "price", "quantity"],
-            },
-          },
-          subtotal: { type: Type.NUMBER, description: "Total before tax and tip." },
-          tax: { type: Type.NUMBER, description: "Total tax amount." },
-          tip: { type: Type.NUMBER, description: "Total tip or service charge." },
-          total: { type: Type.NUMBER, description: "Grand total of the receipt." },
-          currency: { type: Type.STRING, description: "The currency symbol used." },
-        },
-        required: ["items", "subtotal", "tax", "total", "currency"],
-      },
-      thinkingConfig: { thinkingBudget: 4096 }, // Increased budget for complex reasoning
-    },
+Double-check the math: (sum of item prices) should roughly equal subtotal. total should equal subtotal + tax + tip.`,
   });
 
-  if (!response.text) {
-    throw new Error("Failed to parse receipt text from response.");
-  }
+  const cleanBase64 = base64Image.replace(
+    /^data:image\/(png|jpeg|jpg|webp);base64,/,
+    "",
+  );
+
+  const imagePart = {
+    inlineData: {
+      data: cleanBase64,
+      mimeType: "image/png",
+    },
+  };
 
   try {
-    const data = JSON.parse(response.text) as ReceiptData;
-    // Basic validation to ensure numbers are valid
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [imagePart] }],
+    });
+
+    const response = result.response;
+    const jsonText = response.text();
+
+    const data = JSON.parse(jsonText) as ReceiptData;
+
+    // Basic validation
     data.subtotal = Number(data.subtotal) || 0;
     data.tax = Number(data.tax) || 0;
     data.tip = Number(data.tip) || 0;
     data.total = Number(data.total) || 0;
-    
+
     return data;
   } catch (error) {
-    console.error("Failed to parse JSON response:", response.text);
-    throw new Error("AI returned invalid JSON.");
+    console.error("Failed to parse receipt image:", error);
+    throw new Error(
+      "AI could not process the receipt image. Please check the console for more details.",
+    );
   }
 };
 
@@ -103,21 +86,16 @@ export const processChatCommand = async (
   receiptData: ReceiptData,
   currentAssignments: AssignmentMap,
   userMessage: string,
-  currentUser?: string
+  currentUser?: string,
 ): Promise<{ assignments: AssignmentMap; reply: string }> => {
-  const ai = getAiClient();
+  const userContext = currentUser
+    ? `The user is "${currentUser}". "I/me/my" refers to "${currentUser}".`
+    : "";
 
-  const userContext = currentUser 
-    ? `The user is "${currentUser}". "I/me/my" refers to "${currentUser}".` 
-    : '';
-
-  const prompt = `
-    You are a bill-splitting assistant. 
-    ${userContext}
-
-    RECEIPT: ${JSON.stringify(receiptData.items)}
-    CURRENT ASSIGNMENTS: ${JSON.stringify(currentAssignments)}
-    USER COMMAND: "${userMessage}"
+  const model = ai.getGenerativeModel({
+    model: "gemini-1.5-pro-latest",
+    generationConfig,
+    systemInstruction: `You are a bill-splitting assistant. Your task is to update item assignments based on user commands.
 
     RULES:
     - If user says "X had Y", add X to Y's owners.
@@ -125,60 +103,37 @@ export const processChatCommand = async (
     - If user says "Everyone shared X", set owners to all known participants.
     - If user says "Remove X from Y", filter X out.
     - Use fuzzy matching for item names.
-    - Return the FULL updated assignment map.
+    - Always return the FULL, updated assignment map.
 
-    Output format: JSON with "updatedAssignments" (array of {itemId, owners}) and "reply" (string).
-  `;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-pro-preview",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          updatedAssignments: {
-            type: Type.ARRAY,
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    itemId: { type: Type.STRING },
-                    owners: { type: Type.ARRAY, items: { type: Type.STRING } }
-                },
-                required: ["itemId", "owners"]
-            }
-          },
-          reply: { type: Type.STRING },
-        },
-        required: ["updatedAssignments", "reply"],
-      },
-      thinkingConfig: { thinkingBudget: 2048 },
-    },
+    Output format MUST be a JSON object with two keys:
+    1. "updatedAssignments": An object where keys are item IDs and values are arrays of owner names (e.g., {"item_0": ["Alice", "Bob"]}).
+    2. "reply": A friendly, conversational string confirming the action taken.`,
   });
 
-   if (!response.text) {
-    throw new Error("Failed to process chat command.");
-  }
+  const prompt = `
+    ${userContext}
+
+    RECEIPT: ${JSON.stringify(receiptData.items)}
+    CURRENT ASSIGNMENTS: ${JSON.stringify(currentAssignments)}
+    USER COMMAND: "${userMessage}"
+  `;
 
   try {
-    const result = JSON.parse(response.text);
-    const validAssignments: AssignmentMap = {};
-    
-    if (result.updatedAssignments && Array.isArray(result.updatedAssignments)) {
-        result.updatedAssignments.forEach((item: any) => {
-            if (item.itemId && Array.isArray(item.owners)) {
-                validAssignments[item.itemId] = item.owners.map(String);
-            }
-        });
-    }
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const jsonText = response.text();
+
+    const parsedResult = JSON.parse(jsonText);
+
+    const validAssignments: AssignmentMap =
+      parsedResult.updatedAssignments || {};
 
     return {
       assignments: validAssignments,
-      reply: result.reply,
+      reply: parsedResult.reply || "I've updated the assignments.",
     };
   } catch (error) {
-    console.error("Error parsing chat response", error);
-    throw new Error("AI returned invalid assignment data.");
+    console.error("Error processing chat command:", error);
+    throw new Error("AI could not process the chat command.");
   }
 };

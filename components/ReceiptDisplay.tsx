@@ -45,6 +45,12 @@ interface ValidationErrors {
   quantity?: string;
 }
 
+interface EditFields {
+  description: string;
+  price: string;
+  quantity: string;
+}
+
 const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
   data,
   assignments,
@@ -60,11 +66,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
   allParticipants,
 }) => {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editFields, setEditFields] = useState<{
-    description: string;
-    price: string;
-    quantity: string;
-  } | null>(null);
+  const [editFields, setEditFields] = useState<EditFields | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [splittingItemId, setSplittingItemId] = useState<string | null>(null);
   const [newPersonName, setNewPersonName] = useState("");
@@ -129,9 +131,9 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
     cancelEditing();
   };
 
-  const handleEditChange = (field: keyof typeof editFields, value: string) => {
+  const handleEditChange = (field: keyof EditFields, value: string) => {
     if (!editFields) return;
-    const updated = { ...editFields, [field]: value };
+    const updated: EditFields = { ...editFields, [field]: value };
     setEditFields(updated);
     setErrors(validate(updated.description, updated.price, updated.quantity));
   };
@@ -294,8 +296,8 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
             const isEditing = editingItemId === item.id;
             const isSplitting = splittingItemId === item.id;
             const hasErrors = isEditing && Object.keys(errors).length > 0;
-            const currentTotalSplit = Object.values(manualSplits || {}).reduce(
-              (a, b) => a + b,
+            const currentTotalSplit: number = Object.values(manualSplits || {}).reduce(
+              (a: number, b: number) => a + b,
               0,
             );
             const isSplitBalanced =
@@ -427,9 +429,9 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                 <div className="flex justify-between items-center mt-4 pt-2 border-t border-slate-100/50">
                   <div className="flex flex-wrap gap-1.5 flex-1 mr-2">
                     {assignedTo.length > 0 ? (
-                      assignedTo.map((person, idx) => (
+                      assignedTo.map((person) => (
                         <div
-                          key={idx}
+                          key={person}
                           className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-bold border transition-all ${
                             manualSplits
                               ? "bg-amber-50 text-amber-700 border-amber-200"
@@ -649,7 +651,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           min="0"
                           placeholder="Auto-calc"
                           className={`w-full pl-6 pr-3 py-1.5 bg-white border rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${override?.tax !== undefined && override.tax < 0 ? "border-rose-400" : "border-slate-200"}`}
-                          value={override?.tax ?? ""}
+                          value={override?.tax != null ? override.tax.toString() : ""}
                           onChange={(e) =>
                             handleOverrideChange(item.id, "tax", e.target.value)
                           }
@@ -670,7 +672,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           min="0"
                           placeholder="Auto-calc"
                           className={`w-full pl-6 pr-3 py-1.5 bg-white border rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${override?.tip !== undefined && override.tip < 0 ? "border-rose-400" : "border-slate-200"}`}
-                          value={override?.tip ?? ""}
+                          value={override?.tip != null ? override.tip.toString() : ""}
                           onChange={(e) =>
                             handleOverrideChange(item.id, "tip", e.target.value)
                           }

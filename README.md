@@ -1,20 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SplitSmart AI
 
-# Run and deploy your AI Studio app
+A modern, split-screen bill splitting application powered by Google's Gemini 3 Pro model. Upload a receipt image, and use natural language to assign items to friends.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1MlGZlNdPcLs4LbWcC2YhhrumniGsTmQ_
+- **AI Receipt Parsing**: Instantly converts receipt images into structured data (items, prices, tax, tip) using `gemini-3-pro-preview`.
+- **Natural Language Chat**: Assign items by typing commands like "Tom had the burger" or "Sarah and I shared the pizza".
+- **Smart Context**: Enter your name, and the AI understands "I", "me", and "my" in the chat.
+- **Real-time Summaries**: Visual pie charts and detailed breakdowns of who owes what.
+- **Flexible Distribution**: Choose how to split Tax and Tip:
+  - **Proportional**: Based on the cost of items each person ordered (Default).
+  - **Equal Split**: Divided equally among all participants.
 
-## Run Locally
+## Technologies
 
-**Prerequisites:**  Node.js
+- **Frontend**: React 19, TypeScript, Tailwind CSS
+- **AI**: Google GenAI SDK (`@google/genai`)
+- **Icons**: Lucide React
+- **Charts**: Recharts
 
+## Setup
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+This application requires a Google Gemini API Key. Ensure `process.env.API_KEY` is configured in your environment.

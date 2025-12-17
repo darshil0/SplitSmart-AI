@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { TestResult, TestStatus } from "../types";
 import {
   Play,
@@ -13,13 +13,22 @@ import {
 } from "lucide-react";
 import { runTestSuite } from "../tests/suite";
 
+interface TestStats {
+  total: number;
+  passed: number;
+  failed: number;
+  running: number;
+  coverage: number;
+}
+
 const TestDashboard: React.FC = () => {
   const [results, setResults] = useState<TestResult[]>([]);
   const [isTesting, setIsTesting] = useState(false);
 
-  const startTests = async () => {
+  const startTests = useCallback(async () => {
     setIsTesting(true);
-    const report = await runTestSuite((update) => {
+    setResults([]);
+    const report = await runTestSuite((update: TestResult) => {
       setResults((prev) => {
         const index = prev.findIndex((r) => r.id === update.id);
         if (index > -1) {
@@ -31,25 +40,24 @@ const TestDashboard: React.FC = () => {
       });
     });
     setIsTesting(false);
-  };
+  }, []);
 
   const clearResults = () => {
     setResults([]);
   };
 
-  const stats = {
-    total: results.length,
-    passed: results.filter((r) => r.status === "passed").length,
-    failed: results.filter((r) => r.status === "failed").length,
-    coverage:
-      results.length > 0
-        ? Math.round(
-            (results.filter((r) => r.status === "passed").length /
-              results.length) *
-              100,
-          )
-        : 0,
-  };
+  const stats: TestStats = React.useMemo(() => {
+    const total = results.length;
+    const passed = results.filter((r) => r.status === "passed").length;
+    const failed = results.filter((r) => r.status === "failed").length;
+    const running = results.filter((r) => r.status === "running").length;
+    const completed = total - running;
+    const coverage = completed > 0 
+      ? Math.round((passed / completed) * 100) 
+      : 0;
+
+    return { total, passed, failed, running, coverage };
+  }, [results]);
 
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-100 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 animate-in fade-in duration-500">
@@ -70,7 +78,8 @@ const TestDashboard: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={clearResults}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-xl transition-all"
+            disabled={isTesting}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-50 rounded-xl transition-all"
             title="Reset"
           >
             <RotateCcw size={18} />
@@ -78,14 +87,14 @@ const TestDashboard: React.FC = () => {
           <button
             onClick={startTests}
             disabled={isTesting}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
           >
             {isTesting ? (
               <Activity size={18} className="animate-spin" />
             ) : (
               <Play size={18} />
             )}
-            Run All Suites
+            {isTesting ? "Running..." : "Run All Suites"}
           </button>
         </div>
       </div>
@@ -105,6 +114,14 @@ const TestDashboard: React.FC = () => {
             </span>
             <span className="text-lg font-black text-emerald-400">
               {stats.passed}
+            </span>
+          </div>
+          <div className="flex-1 bg-rose-500/10 p-3 rounded-lg flex flex-col items-center">
+            <span className="text-[10px] font-bold text-rose-400 uppercase">
+              Failed
+            </span>
+            <span className="text-lg font-black text-rose-400">
+              {stats.failed}
             </span>
           </div>
           <div className="flex-1 bg-indigo-500/10 p-3 rounded-lg flex flex-col items-center">
@@ -135,15 +152,15 @@ const TestDashboard: React.FC = () => {
           results.map((test) => (
             <div
               key={test.id}
-              className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${
+              className={`flex items-center gap-4 p-3 rounded-xl border transition-all group ${
                 test.status === "passed"
-                  ? "bg-emerald-500/5 border-emerald-500/20"
+                  ? "bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10"
                   : test.status === "failed"
-                    ? "bg-rose-500/5 border-rose-500/20"
-                    : "bg-slate-800 border-slate-700 animate-pulse"
+                    ? "bg-rose-500/5 border-rose-500/20 hover:bg-rose-500/10"
+                    : "bg-slate-800/50 border-slate-700/50 animate-pulse hover:bg-slate-800"
               }`}
             >
-              <div className="shrink-0">
+              <div className="shrink-0 flex items-center justify-center w-5 h-5">
                 {test.status === "passed" && (
                   <CheckCircle2 size={18} className="text-emerald-500" />
                 )}
@@ -151,24 +168,21 @@ const TestDashboard: React.FC = () => {
                   <XCircle size={18} className="text-rose-500" />
                 )}
                 {test.status === "running" && (
-                  <Activity
-                    size={18}
-                    className="text-indigo-400 animate-spin"
-                  />
+                  <Activity size={18} className="text-indigo-400 animate-spin" />
                 )}
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-1">
                   <span
-                    className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                    className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border shrink-0 ${
                       test.category === "BVT"
-                        ? "text-indigo-400 border-indigo-400/30"
+                        ? "text-indigo-400 border-indigo-400/30 bg-indigo-500/5"
                         : test.category === "Edge Case"
-                          ? "text-amber-400 border-amber-400/30"
+                          ? "text-amber-400 border-amber-400/30 bg-amber-500/5"
                           : test.category === "Regression"
-                            ? "text-purple-400 border-purple-400/30"
-                            : "text-slate-400 border-slate-400/30"
+                            ? "text-purple-400 border-purple-400/30 bg-purple-500/5"
+                            : "text-slate-400 border-slate-400/30 bg-slate-700/20"
                     }`}
                   >
                     {test.category}
@@ -178,7 +192,7 @@ const TestDashboard: React.FC = () => {
                   </h4>
                 </div>
                 {test.error && (
-                  <p className="text-[10px] text-rose-400 mt-1 font-mono bg-rose-500/10 p-1.5 rounded border border-rose-500/20 italic">
+                  <p className="text-[10px] text-rose-400 mt-1 font-mono bg-rose-500/10 p-1.5 rounded border border-rose-500/20 italic line-clamp-2">
                     {test.error}
                   </p>
                 )}
@@ -191,7 +205,7 @@ const TestDashboard: React.FC = () => {
       <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
           <ShieldCheck size={12} className="text-emerald-500" />
-          Logical Coverage: 100% Verified
+          Logical Coverage: {stats.coverage}% Verified
         </div>
         <div className="text-[10px] text-slate-600 font-mono">
           TEST_ENV: PRODUCTION_READY

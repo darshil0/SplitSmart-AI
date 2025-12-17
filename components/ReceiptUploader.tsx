@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Upload, Camera } from 'lucide-react';
+import { Camera } from 'lucide-react';
 
 interface ReceiptUploaderProps {
   onUpload: (file: File) => void;
@@ -15,10 +15,20 @@ const ReceiptUploader: React.FC<ReceiptUploaderProps> = ({ onUpload, isProcessin
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ' ') && !isProcessing) {
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
     <div 
-      className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition-all group"
+      className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition-all group outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
       onClick={() => !isProcessing && fileInputRef.current?.click()}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label="Upload receipt image"
     >
       <input
         type="file"
@@ -27,6 +37,7 @@ const ReceiptUploader: React.FC<ReceiptUploaderProps> = ({ onUpload, isProcessin
         accept="image/*"
         className="hidden"
         disabled={isProcessing}
+        tabIndex={-1}
       />
       <div className="bg-indigo-100 p-4 rounded-full text-indigo-600 mb-4 group-hover:scale-110 transition-transform">
         <Camera size={32} />

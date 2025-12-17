@@ -1,15 +1,16 @@
 import React, { useMemo } from 'react';
-import { ReceiptData, AssignmentMap, PersonSummary } from '../types';
+import { ReceiptData, AssignmentMap, PersonSummary, DistributionMethod } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 interface SummaryDisplayProps {
   receiptData: ReceiptData | null;
   assignments: AssignmentMap;
+  distributionMethod: DistributionMethod;
 }
 
 const COLORS = ['#6366f1', '#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#ef4444', '#3b82f6'];
 
-const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ receiptData, assignments }) => {
+const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ receiptData, assignments, distributionMethod }) => {
   const summary = useMemo<PersonSummary[]>(() => {
     if (!receiptData) return [];
 
@@ -29,7 +30,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ receiptData, assignment
       }
     };
 
-    // Calculate item shares
+    // 1. Calculate item shares (Subtotal)
     receiptData.items.forEach((item) => {
       const assignedPeople = assignments[item.id] || [];
       const splitCount = assignedPeople.length;
@@ -47,12 +48,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ receiptData, assignment
       }
     });
 
-    // Calculate totals including unassigned
-    // Note: We only calculate tax/tip shares based on what has been assigned to people
-    // If items are unassigned, the tax/tip for those items effectively "disappears" from this view 
-    // or we could add an "Unassigned" person. Let's add "Unassigned" for clarity.
-    
-    // Check for unassigned items
+    // 2. Handle Unassigned
     const assignedItemIds = new Set(Object.keys(assignments).filter(k => assignments[k].length > 0));
     const unassignedItems = receiptData.items.filter(item => !assignedItemIds.has(item.id));
     
@@ -64,23 +60,37 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ receiptData, assignment
         });
     }
 
-    // Distribute Tax and Tip proportionally based on subtotal share
-    // Logic: (Person Subtotal / Total Subtotal) * Total Tax
-    // Note: This assumes tax/tip applies to everything. 
-    
-    // We use the receipt's subtotal for the denominator to ensure math works out even if parsing was slightly off 
-    // relative to sum of items.
+    // 3. Distribute Tax and Tip
+    const peopleList = Object.values(peopleMap);
     const validSubtotal = receiptData.subtotal || 1; 
 
-    Object.values(peopleMap).forEach((person) => {
-      const shareRatio = person.subtotal / validSubtotal;
-      person.taxShare = receiptData.tax * shareRatio;
-      person.tipShare = receiptData.tip * shareRatio;
+    // Filter real people (excluding 'Unassigned') for Equal split logic
+    const realPeopleCount = peopleList.filter(p => p.name !== 'Unassigned').length;
+
+    peopleList.forEach((person) => {
+      if (distributionMethod === 'PROPORTIONAL') {
+        // (Person Subtotal / Total Subtotal) * Total Tax
+        const shareRatio = person.subtotal / validSubtotal;
+        person.taxShare = receiptData.tax * shareRatio;
+        person.tipShare = receiptData.tip * shareRatio;
+      } else if (distributionMethod === 'EQUAL') {
+        // Equal split among real people
+        if (person.name === 'Unassigned') {
+           person.taxShare = 0;
+           person.tipShare = 0;
+        } else {
+           // If no real people yet, prevent divide by zero (though unlikely if items are assigned)
+           const count = realPeopleCount > 0 ? realPeopleCount : 1; 
+           person.taxShare = receiptData.tax / count;
+           person.tipShare = receiptData.tip / count;
+        }
+      }
+
       person.totalOwed = person.subtotal + person.taxShare + person.tipShare;
     });
 
-    return Object.values(peopleMap).sort((a, b) => b.totalOwed - a.totalOwed);
-  }, [receiptData, assignments]);
+    return peopleList.sort((a, b) => b.totalOwed - a.totalOwed);
+  }, [receiptData, assignments, distributionMethod]);
 
   if (!receiptData) return null;
 
@@ -88,7 +98,12 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ receiptData, assignment
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-full flex flex-col">
-      <h3 className="text-lg font-bold text-gray-800 mb-4">Cost Breakdown</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-gray-800">Cost Breakdown</h3>
+        <span className="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-500 rounded-md">
+           {distributionMethod === 'PROPORTIONAL' ? 'Proportional' : 'Equal Split'}
+        </span>
+      </div>
       
       {/* Chart */}
       <div className="h-48 w-full mb-6">
@@ -132,7 +147,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ receiptData, assignment
                 <span>{receiptData.currency}{person.subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-xs text-gray-400">
-                <span>Tax & Tip</span>
+                <span>Tax & Tip ({distributionMethod === 'PROPORTIONAL' ? '%' : '='})</span>
                 <span>{receiptData.currency}{(person.taxShare + person.tipShare).toFixed(2)}</span>
               </div>
             </div>

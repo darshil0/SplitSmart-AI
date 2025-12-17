@@ -34,3 +34,5 @@ export interface PersonSummary {
   tipShare: number;
   totalOwed: number;
 }
+
+export type DistributionMethod = 'PROPORTIONAL' | 'EQUAL';

@@ -109,7 +109,7 @@ export const processChatCommand = async (
     1. Interpret the user's natural language command to update the assignments.
     2. Support statements like "Tom had the burger", "Alice and Bob shared the pizza", "Remove Sarah from the salad".
     3. If an item name in the command is fuzzy (e.g. "drinks" for "Coke" and "Beer"), try to match reasonably.
-    4. Return the *complete* updated assignment map.
+    4. Return the *complete* updated assignment map for all items that have assignments.
     5. Provide a short, friendly, conversational reply confirming what you did.
 
     Note:
@@ -120,7 +120,9 @@ export const processChatCommand = async (
     
     Output JSON Schema:
     {
-      "assignments": { ... },
+      "updatedAssignments": [
+         { "itemId": "item_1", "owners": ["Tom", "Jerry"] }
+      ],
       "reply": "string"
     }
   `;
@@ -133,14 +135,21 @@ export const processChatCommand = async (
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-          assignments: {
-            type: Type.OBJECT,
-            description: "Map of item IDs to arrays of names",
-            additionalProperties: true, // Allow dynamic keys for item IDs
+          updatedAssignments: {
+            type: Type.ARRAY,
+            description: "List of items and their assigned owners",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    itemId: { type: Type.STRING },
+                    owners: { type: Type.ARRAY, items: { type: Type.STRING } }
+                },
+                required: ["itemId", "owners"]
+            }
           },
           reply: { type: Type.STRING },
         },
-        required: ["assignments", "reply"],
+        required: ["updatedAssignments", "reply"],
       },
       thinkingConfig: { thinkingBudget: 4096 }, // Reasoning about fuzzy matching
     },
@@ -152,16 +161,14 @@ export const processChatCommand = async (
 
   try {
     const result = JSON.parse(response.text);
-    // Ensure assignments matches our expected type structure (handling potentially empty or weird returns)
     const validAssignments: AssignmentMap = {};
     
-    // Safety copy to ensure we match the AssignmentMap signature
-    if (result.assignments) {
-        for (const [key, value] of Object.entries(result.assignments)) {
-            if (Array.isArray(value)) {
-                validAssignments[key] = value.map(String);
+    if (result.updatedAssignments && Array.isArray(result.updatedAssignments)) {
+        result.updatedAssignments.forEach((item: any) => {
+            if (item.itemId && Array.isArray(item.owners)) {
+                validAssignments[item.itemId] = item.owners.map(String);
             }
-        }
+        });
     }
 
     return {

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { AssignmentMap, ChatMessage, ReceiptData } from './types';
+import { AssignmentMap, ChatMessage, ReceiptData, DistributionMethod } from './types';
 import { parseReceiptImage, processChatCommand } from './services/geminiService';
 import ReceiptDisplay from './components/ReceiptDisplay';
 import ChatInterface from './components/ChatInterface';
 import SummaryDisplay from './components/SummaryDisplay';
 import ReceiptUploader from './components/ReceiptUploader';
-import { Split, Github, User } from 'lucide-react';
+import { Split, User } from 'lucide-react';
 
 const App: React.FC = () => {
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [userName, setUserName] = useState('');
   const [isNameSet, setIsNameSet] = useState(false);
+  const [distributionMethod, setDistributionMethod] = useState<DistributionMethod>('PROPORTIONAL');
 
   // Initial welcome message
   useEffect(() => {
@@ -166,6 +167,8 @@ const App: React.FC = () => {
                   data={receiptData} 
                   assignments={assignments} 
                   isLoading={isUploading}
+                  distributionMethod={distributionMethod}
+                  onDistributionChange={setDistributionMethod}
                 />
              </div>
            )}
@@ -190,6 +193,7 @@ const App: React.FC = () => {
                 <SummaryDisplay 
                   receiptData={receiptData} 
                   assignments={assignments} 
+                  distributionMethod={distributionMethod}
                 />
               </div>
             </div>

@@ -1,14 +1,22 @@
 import React from 'react';
-import { ReceiptData, AssignmentMap } from '../types';
-import { User, DollarSign, Receipt as ReceiptIcon } from 'lucide-react';
+import { ReceiptData, AssignmentMap, DistributionMethod } from '../types';
+import { User, Receipt as ReceiptIcon, Settings2 } from 'lucide-react';
 
 interface ReceiptDisplayProps {
   data: ReceiptData | null;
   assignments: AssignmentMap;
   isLoading: boolean;
+  distributionMethod: DistributionMethod;
+  onDistributionChange: (method: DistributionMethod) => void;
 }
 
-const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({ data, assignments, isLoading }) => {
+const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({ 
+  data, 
+  assignments, 
+  isLoading, 
+  distributionMethod,
+  onDistributionChange 
+}) => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
@@ -43,7 +51,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({ data, assignments, isLo
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 mb-8">
         {data.items.map((item) => {
           const assignedTo = assignments[item.id] || [];
           
@@ -89,22 +97,59 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({ data, assignments, isLo
       </div>
 
       {/* Footer totals */}
-      <div className="mt-8 pt-4 border-t border-gray-100 space-y-2 text-sm text-gray-600">
-        <div className="flex justify-between">
-          <span>Subtotal</span>
-          <span>{data.currency}{data.subtotal.toFixed(2)}</span>
+      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+        <div className="space-y-2 text-sm text-gray-600 border-b border-gray-200 pb-3">
+          <div className="flex justify-between">
+            <span>Subtotal</span>
+            <span>{data.currency}{data.subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tax</span>
+            <span>{data.currency}{data.tax.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tip</span>
+            <span>{data.currency}{data.tip.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-lg font-bold text-gray-900 pt-1">
+            <span>Total</span>
+            <span>{data.currency}{data.total.toFixed(2)}</span>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span>Tax</span>
-          <span>{data.currency}{data.tax.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Tip</span>
-          <span>{data.currency}{data.tip.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between text-lg font-bold text-gray-900 pt-2">
-          <span>Total</span>
-          <span>{data.currency}{data.total.toFixed(2)}</span>
+
+        {/* Tax/Tip Distribution Settings */}
+        <div className="pt-2">
+          <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            <Settings2 size={12} />
+            <span>Tax & Tip Distribution</span>
+          </div>
+          <div className="flex p-1 bg-gray-200 rounded-lg">
+            <button
+              onClick={() => onDistributionChange('PROPORTIONAL')}
+              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all ${
+                distributionMethod === 'PROPORTIONAL'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Proportional
+            </button>
+            <button
+              onClick={() => onDistributionChange('EQUAL')}
+              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all ${
+                distributionMethod === 'EQUAL'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Equal Split
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1.5 px-1">
+            {distributionMethod === 'PROPORTIONAL' 
+              ? 'Tax and tip are split based on the cost of items each person ordered.' 
+              : 'Tax and tip are divided equally among all people contributing to the bill.'}
+          </p>
         </div>
       </div>
     </div>

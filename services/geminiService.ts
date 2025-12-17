@@ -1,13 +1,11 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ReceiptData, AssignmentMap } from "../types";
 
 // Helper to get AI instance
+// Fix: Use process.env.API_KEY directly when initializing the GoogleGenAI instance per guidelines
 const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API_KEY environment variable is missing.");
-  }
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 };
 
 // 1. Parse Receipt Image

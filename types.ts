@@ -35,4 +35,13 @@ export interface PersonSummary {
   totalOwed: number;
 }
 
-export type DistributionMethod = 'PROPORTIONAL' | 'EQUAL';
+export type DistributionMethod = 'PROPORTIONAL' | 'EQUAL' | 'MANUAL';
+
+export interface ItemTaxTipOverride {
+  tax?: number;
+  tip?: number;
+}
+
+export interface ItemOverridesMap {
+  [itemId: string]: ItemTaxTipOverride;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   AssignmentMap,
   ChatMessage,
@@ -30,27 +30,31 @@ import {
   History as HistoryIcon,
   Beaker,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const App: React.FC = () => {
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [assignments, setAssignments] = useState<AssignmentMap>({});
-  const [itemManualSplits, setItemManualSplits] = useState<ItemManualSplitsMap>(
-    {},
-  );
-  const [pastAssignments, setPastAssignments] = useState<
-    { assignments: AssignmentMap; itemManualSplits: ItemManualSplitsMap }[]
-  >([]);
-  const [futureAssignments, setFutureAssignments] = useState<
-    { assignments: AssignmentMap; itemManualSplits: ItemManualSplitsMap }[]
-  >([]);
-
-  const [history, setHistory] = useState<HistoryEntry[]>(() => {
-    const saved = localStorage.getItem("splitSmartHistory");
-    return saved ? JSON.parse(saved) : [];
+  const [itemManualSplits, setItemManualSplits] = useState<ItemManualSplitsMap>({});
+  
+  // Fixed history state - single source of truth
+  const [history, setHistory] = useState<{ 
+    assignments: AssignmentMap; 
+    itemManualSplits: ItemManualSplitsMap;
+    receiptData: ReceiptData | null;
+    timestamp: number;
+  }[]>(() => {
+    try {
+      const saved = localStorage.getItem("splitSmartHistory");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
+  
   const [isCurrentSplitSaved, setIsCurrentSplitSaved] = useState(false);
-
   const [itemOverrides, setItemOverrides] = useState<ItemOverridesMap>({});
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,110 +62,159 @@ const App: React.FC = () => {
   const [userName, setUserName] = useState("");
   const [isNameSet, setIsNameSet] = useState(false);
   const [userNameError, setUserNameError] = useState(false);
-  const [distributionMethod, setDistributionMethod] =
-    useState<DistributionMethod>("PROPORTIONAL");
-  const [activeMobileTab, setActiveMobileTab] = useState<
-    "receipt" | "chat" | "summary" | "history"
-  >("receipt");
+  const [distributionMethod, setDistributionMethod] = useState<DistributionMethod>("PROPORTIONAL");
+  const [activeMobileTab, setActiveMobileTab] = useState<"receipt" | "chat" | "summary" | "history">("receipt");
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [showTestLab, setShowTestLab] = useState(false);
+  
+  // Undo/Redo state
+  const historyRef = useRef(history);
+  const historyIndexRef = useRef(0);
 
-  // Sync history to localStorage
+  // Sync history refs
   useEffect(() => {
-    localStorage.setItem("splitSmartHistory", JSON.stringify(history));
+    historyRef.current = history;
+    historyIndexRef.current = Math.max(0, history.length - 1);
+  }, [history]);
+
+  // Load history from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("splitSmartHistory");
+      if (saved) {
+        const parsed = JSON.parse(saved) as typeof history;
+        setHistory(parsed);
+        if (parsed.length > 0) {
+          const latest = parsed[parsed.length - 1];
+          setAssignments(latest.assignments);
+          setItemManualSplits(latest.itemManualSplits);
+          setReceiptData(latest.receiptData);
+          setIsCurrentSplitSaved(true);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load history:", error);
+    }
+  }, []);
+
+  // Save history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("splitSmartHistory", JSON.stringify(history));
+    } catch (error) {
+      console.error("Failed to save history:", error);
+    }
   }, [history]);
 
   // Initial welcome message
   useEffect(() => {
-    setMessages([
-      {
-        id: "init",
-        role: "assistant",
-        content:
-          "Welcome to SplitSmart! Please upload a receipt to get started.",
-        timestamp: Date.now(),
-      },
-    ]);
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: "init",
+          role: "assistant",
+          content: "Welcome to SplitSmart! Please upload a receipt to get started.",
+          timestamp: Date.now(),
+        },
+      ]);
+    }
 
     const hasSeenWalkthrough = localStorage.getItem("splitSmartWalkthrough");
     if (!hasSeenWalkthrough) {
       setShowWalkthrough(true);
       localStorage.setItem("splitSmartWalkthrough", "true");
     }
-  }, []);
+  }, [messages.length]);
 
   const allParticipants = useMemo(() => {
     const people = new Set<string>();
     if (userName && isNameSet) people.add(userName);
     Object.values(assignments).forEach((names) => {
-      names.forEach((name) => people.add(name));
+      names?.forEach((name) => people.add(name));
     });
     return Array.from(people).sort();
   }, [assignments, userName, isNameSet]);
 
-  const pushToHistory = useCallback(
-    (newMap: AssignmentMap, newManualSplits: ItemManualSplitsMap) => {
-      setPastAssignments((prev) => [
-        ...prev,
-        { assignments, itemManualSplits },
-      ]);
-      setAssignments(newMap);
-      setItemManualSplits(newManualSplits);
-      setFutureAssignments([]);
-      setIsCurrentSplitSaved(false);
-    },
-    [assignments, itemManualSplits],
-  );
+  const canUndo = useMemo(() => historyIndexRef.current > 0, []);
+  const canRedo = useMemo(() => historyIndexRef.current < history.length - 1, []);
 
-  const handleUndo = useCallback(() => {
-    if (pastAssignments.length === 0) return;
-    const previous = pastAssignments[pastAssignments.length - 1];
-    const newPast = pastAssignments.slice(0, -1);
-    setFutureAssignments((prev) => [
-      { assignments, itemManualSplits },
-      ...prev,
-    ]);
-    setAssignments(previous.assignments);
-    setItemManualSplits(previous.itemManualSplits);
-    setPastAssignments(newPast);
+  const pushToHistory = useCallback((newAssignments: AssignmentMap, newManualSplits: ItemManualSplitsMap) => {
+    setHistory(prev => {
+      // Truncate future history
+      const newHistory = prev.slice(0, historyIndexRef.current + 1);
+      return [
+        ...newHistory,
+        {
+          assignments: newAssignments,
+          itemManualSplits: newManualSplits,
+          receiptData,
+          timestamp: Date.now(),
+        }
+      ];
+    });
+    historyIndexRef.current = history.length;
     setIsCurrentSplitSaved(false);
-  }, [assignments, itemManualSplits, pastAssignments]);
+  }, [receiptData]);
 
-  const handleRedo = useCallback(() => {
-    if (futureAssignments.length === 0) return;
-    const next = futureAssignments[0];
-    const newFuture = futureAssignments.slice(1);
-    setPastAssignments((prev) => [...prev, { assignments, itemManualSplits }]);
-    setAssignments(next.assignments);
-    setItemManualSplits(next.itemManualSplits);
-    setFutureAssignments(newFuture);
-    setIsCurrentSplitSaved(false);
-  }, [assignments, itemManualSplits, futureAssignments]);
-
-  const handleSaveToHistory = (entry: HistoryEntry) => {
-    setHistory((prev) => [entry, ...prev]);
-    setIsCurrentSplitSaved(true);
-  };
-
-  const handleDeleteHistoryEntry = (id: string) => {
-    setHistory((prev) => prev.filter((e) => e.id !== id));
-  };
-
-  const handleClearHistory = () => {
-    if (confirm("Are you sure you want to clear all history?")) {
-      setHistory([]);
+  const undo = useCallback(() => {
+    if (historyIndexRef.current > 0) {
+      historyIndexRef.current -= 1;
+      const state = history[historyIndexRef.current];
+      setAssignments(state.assignments);
+      setItemManualSplits(state.itemManualSplits);
+      setReceiptData(state.receiptData);
+      setIsCurrentSplitSaved(historyIndexRef.current < history.length - 1);
     }
-  };
+  }, [history]);
 
-  const handleNameSubmit = () => {
-    if (userName.trim()) {
+  const redo = useCallback(() => {
+    if (historyIndexRef.current < history.length - 1) {
+      historyIndexRef.current += 1;
+      const state = history[historyIndexRef.current];
+      setAssignments(state.assignments);
+      setItemManualSplits(state.itemManualSplits);
+      setReceiptData(state.receiptData);
+      setIsCurrentSplitSaved(historyIndexRef.current < history.length - 1);
+    }
+  }, [history]);
+
+  const handleSaveToHistory = useCallback((entry: HistoryEntry) => {
+    // Already tracked in main history
+    setIsCurrentSplitSaved(true);
+  }, []);
+
+  const handleDeleteHistoryEntry = useCallback((id: string) => {
+    setHistory(prev => {
+      const newHistory = prev.filter((_, index) => index !== parseInt(id));
+      // Adjust current index
+      if (historyIndexRef.current >= newHistory.length) {
+        historyIndexRef.current = Math.max(0, newHistory.length - 1);
+      }
+      return newHistory;
+    });
+  }, []);
+
+  const handleClearHistory = useCallback(() => {
+    if (confirm("Are you sure you want to clear all history? This cannot be undone.")) {
+      setHistory([]);
+      historyIndexRef.current = 0;
+      setAssignments({});
+      setItemManualSplits({});
+      setReceiptData(null);
+      setIsCurrentSplitSaved(false);
+    }
+  }, []);
+
+  const handleNameSubmit = useCallback(() => {
+    const trimmedName = userName.trim();
+    if (trimmedName) {
       if (!isNameSet) {
-        setMessages((prev) => [
+        setMessages(prev => [
           ...prev,
           {
             id: Date.now().toString(),
             role: "assistant",
-            content: `Hi ${userName}! I'll assign items to you when you say "I" or "me".`,
+            content: `Hi ${trimmedName}! I'll assign items to you when you say "I" or "me".`,
             timestamp: Date.now(),
           },
         ]);
@@ -172,14 +225,20 @@ const App: React.FC = () => {
       setUserNameError(true);
       setIsNameSet(false);
     }
-  };
+  }, [userName, isNameSet]);
 
   const handleFileUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
     setIsUploading(true);
-    setMessages((prev) => [
+    const userMsgId = Date.now().toString();
+    setMessages(prev => [
       ...prev,
       {
-        id: Date.now().toString(),
+        id: userMsgId,
         role: "assistant",
         content: "Analyzing your receipt... this might take a moment.",
         timestamp: Date.now(),
@@ -189,91 +248,99 @@ const App: React.FC = () => {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const base64String = reader.result as string;
         try {
-          const data = await parseReceiptImage(base64String);
+          const data = await parseReceiptImage(reader.result as string);
+          
+          // Reset state and push to history
+          const newHistory = [{
+            assignments: {},
+            itemManualSplits: {},
+            receiptData: data,
+            timestamp: Date.now(),
+          }];
+          
+          setHistory(newHistory);
+          historyIndexRef.current = 0;
           setReceiptData(data);
           setAssignments({});
           setItemManualSplits({});
-          setPastAssignments([]);
-          setFutureAssignments([]);
           setItemOverrides({});
           setDistributionMethod("PROPORTIONAL");
           setIsCurrentSplitSaved(false);
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: (Date.now() + 1).toString(),
-              role: "assistant",
-              content: `I found ${data.items.length} items. You can now tell me who ordered what!`,
-              timestamp: Date.now(),
-            },
-          ]);
+          
+          // Update messages
+          setMessages(prev => prev.map(msg => 
+            msg.id === userMsgId 
+              ? { ...msg, content: `Found ${data.items.length} items! Tell me who ordered what.` }
+              : msg
+          ));
+          
           setActiveMobileTab("receipt");
         } catch (error) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: (Date.now() + 1).toString(),
-              role: "assistant",
-              content:
-                "Sorry, I had trouble reading that receipt. Please try a clearer image.",
-              timestamp: Date.now(),
-            },
-          ]);
+          console.error("Receipt parsing failed:", error);
+          setMessages(prev => prev.map(msg => 
+            msg.id === userMsgId 
+              ? { ...msg, content: "Sorry, I couldn't read that receipt. Please try a clearer image." }
+              : msg
+          ));
         } finally {
           setIsUploading(false);
         }
       };
       reader.readAsDataURL(file);
     } catch (error) {
+      console.error("File upload failed:", error);
       setIsUploading(false);
     }
   };
 
-  const handleUpdateItem = (updatedItem: ReceiptItem) => {
+  const handleUpdateItem = useCallback((updatedItem: ReceiptItem) => {
     if (!receiptData) return;
     const newItems = receiptData.items.map((item) =>
       item.id === updatedItem.id ? updatedItem : item,
     );
     const newSubtotal = newItems.reduce((acc, item) => acc + item.price, 0);
-    const newTotal = newSubtotal + receiptData.tax + receiptData.tip;
-    setReceiptData({
+    const newReceiptData = {
       ...receiptData,
       items: newItems,
       subtotal: newSubtotal,
-      total: newTotal,
-    });
-    setIsCurrentSplitSaved(false);
-  };
+      total: newSubtotal + receiptData.tax + receiptData.tip,
+    };
+    setReceiptData(newReceiptData);
+    pushToHistory(assignments, itemManualSplits);
+  }, [receiptData, assignments, itemManualSplits, pushToHistory]);
 
-  const handleUpdateAssignments = (itemId: string, names: string[]) => {
-    pushToHistory({ ...assignments, [itemId]: names }, itemManualSplits);
-  };
+  const handleUpdateAssignments = useCallback((itemId: string, names: string[]) => {
+    const newAssignments = { ...assignments, [itemId]: names };
+    pushToHistory(newAssignments, itemManualSplits);
+  }, [assignments, itemManualSplits, pushToHistory]);
 
-  const handleUpdateManualSplits = (
+  const handleUpdateManualSplits = useCallback((
     itemId: string,
     splits: { [name: string]: number } | null,
   ) => {
-    const nextManual = { ...itemManualSplits };
+    const nextManualSplits = { ...itemManualSplits };
     if (splits === null) {
-      delete nextManual[itemId];
+      delete nextManualSplits[itemId];
     } else {
-      nextManual[itemId] = splits;
+      nextManualSplits[itemId] = splits;
     }
-    pushToHistory(assignments, nextManual);
-  };
+    pushToHistory(assignments, nextManualSplits);
+  }, [assignments, itemManualSplits, pushToHistory]);
 
   const handleSendMessage = async (text: string) => {
-    if (!receiptData) return;
+    if (!receiptData || isProcessing) return;
+    
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
-      content: text,
+      content: text.trim(),
       timestamp: Date.now(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    
+    setMessages(prev => [...prev, userMsg]);
     setIsProcessing(true);
+
     try {
       const { assignments: newAssignments, reply } = await processChatCommand(
         receiptData,
@@ -282,7 +349,7 @@ const App: React.FC = () => {
         userName,
       );
       pushToHistory(newAssignments, itemManualSplits);
-      setMessages((prev) => [
+      setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
@@ -292,12 +359,13 @@ const App: React.FC = () => {
         },
       ]);
     } catch (error) {
-      setMessages((prev) => [
+      console.error("Chat processing failed:", error);
+      setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "I'm having trouble understanding that.",
+          content: "Sorry, I couldn't process that. Try rephrasing!",
           timestamp: Date.now(),
         },
       ]);
@@ -306,202 +374,271 @@ const App: React.FC = () => {
     }
   };
 
+  const currentHistoryEntry = history[historyIndexRef.current] || {
+    assignments: {},
+    itemManualSplits: {},
+    receiptData: null,
+    timestamp: Date.now(),
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-inter">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 overflow-hidden font-inter">
       {showWalkthrough && (
         <WalkthroughModal onClose={() => setShowWalkthrough(false)} />
       )}
 
       {showTestLab && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-2xl h-[80vh] relative">
-            <button
-              onClick={() => setShowTestLab(false)}
-              className="absolute -top-12 right-0 p-2 text-white bg-slate-800 hover:bg-slate-700 rounded-full shadow-xl transition-all"
-            >
-              <X size={24} />
-            </button>
-            <TestDashboard />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div className="w-full max-w-4xl h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in-0 zoom-in-95 duration-300">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-900">Test Lab</h2>
+              <button
+                onClick={() => setShowTestLab(false)}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-all"
+                aria-label="Close test lab"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              <TestDashboard />
+            </div>
           </div>
         </div>
       )}
 
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-4 sm:gap-6">
-          <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 p-2 rounded-xl text-white shadow-lg shadow-indigo-100">
-              <Split size={20} className="sm:size-24" />
+      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/50 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-3 rounded-2xl text-white shadow-xl">
+              <Split size={24} />
             </div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-              SplitSmart
-            </h1>
+            <div>
+              <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">
+                SplitSmart
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">AI Bill Splitter</p>
+            </div>
           </div>
 
-          <div className="flex flex-col relative">
-            <div
-              className={`flex items-center bg-slate-100 px-3 py-1.5 rounded-2xl border transition-all duration-300 group ${userNameError ? "border-rose-400 bg-rose-50" : "border-transparent focus-within:bg-white focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-100"}`}
-            >
-              <User
-                size={14}
-                className={`${userNameError ? "text-rose-500" : "text-slate-400 group-focus-within:text-indigo-500"} mr-2`}
+          <div className="flex flex-col items-start">
+            <div className={`flex items-center bg-slate-100/80 px-4 py-2 rounded-2xl border-2 transition-all duration-300 group ${
+              userNameError 
+                ? "border-rose-400 bg-rose-50/80 shadow-rose-100" 
+                : "border-slate-200 hover:border-slate-300 focus-within:border-indigo-400 focus-within:bg-white shadow-lg shadow-indigo-100/50"
+            }`}>
+              <User 
+                size={16} 
+                className={`mr-3 transition-colors ${
+                  userNameError 
+                    ? "text-rose-500" 
+                    : "text-slate-500 group-focus-within:text-indigo-600"
+                }`} 
               />
               <input
                 type="text"
-                placeholder="Your Name"
+                placeholder="Enter your name"
                 value={userName}
                 onChange={(e) => {
                   setUserName(e.target.value);
                   if (e.target.value.trim()) setUserNameError(false);
                 }}
                 onBlur={handleNameSubmit}
-                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                className="bg-transparent border-none focus:outline-none text-sm text-slate-800 w-24 sm:w-32 placeholder-slate-400 font-medium"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="bg-transparent border-none outline-none text-sm font-semibold text-slate-900 placeholder-slate-500 w-28 sm:w-36"
+                autoComplete="off"
               />
             </div>
+            {isNameSet && (
+              <span className="text-xs text-slate-500 mt-1 font-medium">
+                Ready to split! 👋
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowTestLab(true)}
-            className={`p-2 rounded-xl transition-all ${showTestLab ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"}`}
-            title="Open Test Lab"
+            className={`p-3 rounded-2xl transition-all shadow-sm ${
+              showTestLab 
+                ? "bg-indigo-600 text-white shadow-indigo-300 hover:shadow-indigo-400" 
+                : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 bg-white/50"
+            }`}
+            title="Test Lab (Ctrl+T)"
           >
             <Beaker size={20} />
           </button>
           <button
             onClick={() => setShowWalkthrough(true)}
-            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-            title="Show Walkthrough"
+            className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 bg-white/50 rounded-2xl transition-all shadow-sm"
+            title="Help & Walkthrough"
           >
             <HelpCircle size={20} />
           </button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-        <div className="lg:hidden flex bg-white border-b border-slate-200 p-1">
-          <button
-            onClick={() => setActiveMobileTab("receipt")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === "receipt" ? "bg-indigo-50 text-indigo-700" : "text-slate-500"}`}
-          >
-            <ReceiptIcon size={18} /> Receipt
-          </button>
-          <button
-            onClick={() => setActiveMobileTab("chat")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === "chat" ? "bg-indigo-50 text-indigo-700" : "text-slate-500"}`}
-          >
-            <MessageSquare size={18} /> Chat
-          </button>
-          <button
-            onClick={() => setActiveMobileTab("summary")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === "summary" ? "bg-indigo-50 text-indigo-700" : "text-slate-500"}`}
-          >
-            <PieChartIcon size={18} /> Total
-          </button>
-          <button
-            onClick={() => setActiveMobileTab("history")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === "history" ? "bg-indigo-50 text-indigo-700" : "text-slate-500"}`}
-          >
-            <HistoryIcon size={18} /> History
-          </button>
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Tab Bar */}
+        <div className="lg:hidden bg-white/80 backdrop-blur border-b border-slate-200 px-2 py-2">
+          <div className="flex gap-1">
+            {[
+              { key: "receipt" as const, icon: ReceiptIcon, label: "Receipt" },
+              { key: "chat" as const, icon: MessageSquare, label: "Chat" },
+              { key: "summary" as const, icon: PieChartIcon, label: "Total" },
+              { key: "history" as const, icon: HistoryIcon, label: "History" },
+            ].map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveMobileTab(key)}
+                className={`flex-1 flex flex-col items-center gap-1 py-3 px-4 rounded-2xl text-xs font-bold transition-all shadow-sm ${
+                  activeMobileTab === key
+                    ? "bg-indigo-500 text-white shadow-indigo-300"
+                    : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 bg-white/50"
+                }`}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div
-          className={`lg:hidden flex-1 overflow-hidden p-4 bg-slate-50 ${activeMobileTab === "history" ? "block" : "hidden"}`}
-        >
-          <HistorySection
-            history={history}
-            onDelete={handleDeleteHistoryEntry}
-            onClearAll={handleClearHistory}
-          />
-        </div>
-
-        <div
-          className={`flex-1 lg:w-1/2 p-4 sm:p-6 overflow-y-auto border-r border-slate-200 bg-slate-50/30 ${activeMobileTab !== "receipt" ? "hidden lg:block" : "block"}`}
-        >
-          {!receiptData ? (
-            <div className="h-full flex flex-col justify-center max-w-xl mx-auto w-full">
-              <ReceiptUploader
-                onUpload={handleFileUpload}
-                isProcessing={isUploading}
-              />
-              <div className="hidden lg:block mt-6">
-                <HistorySection
-                  history={history}
-                  onDelete={handleDeleteHistoryEntry}
-                  onClearAll={handleClearHistory}
+        {/* Left Panel - Receipt/No Receipt */}
+        <div className={`flex-1 lg:w-1/2 overflow-hidden transition-all duration-300 ${
+          activeMobileTab !== "receipt" && !receiptData ? "hidden lg:block" : "block"
+        }`}>
+          <div className="h-full p-6 flex flex-col">
+            {!receiptData ? (
+              <div className="h-full flex flex-col justify-center items-center gap-8 max-w-md mx-auto">
+                <ReceiptUploader onUpload={handleFileUpload} isProcessing={isUploading} />
+                {history.length > 0 && (
+                  <div className="w-full max-w-md">
+                    <HistorySection
+                      history={history.map((h, i) => ({
+                        id: i.toString(),
+                        ...h,
+                        name: `Split ${new Date(h.timestamp).toLocaleDateString()}`,
+                      }))}
+                      onDelete={handleDeleteHistoryEntry}
+                      onClearAll={handleClearHistory}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full max-w-2xl mx-auto w-full flex flex-col gap-6">
+                <ReceiptDisplay
+                  data={receiptData}
+                  assignments={currentHistoryEntry.assignments}
+                  itemManualSplits={currentHistoryEntry.itemManualSplits}
+                  isLoading={isUploading}
+                  distributionMethod={distributionMethod}
+                  onDistributionChange={setDistributionMethod}
+                  itemOverrides={itemOverrides}
+                  onOverrideChange={setItemOverrides}
+                  onUpdateItem={handleUpdateItem}
+                  onUpdateAssignments={handleUpdateAssignments}
+                  onUpdateManualSplits={handleUpdateManualSplits}
+                  allParticipants={allParticipants}
                 />
               </div>
-            </div>
-          ) : (
-            <div className="h-full max-w-2xl mx-auto w-full flex flex-col gap-6">
-              <ReceiptDisplay
-                data={receiptData}
-                assignments={assignments}
-                itemManualSplits={itemManualSplits}
-                isLoading={isUploading}
-                distributionMethod={distributionMethod}
-                onDistributionChange={setDistributionMethod}
-                itemOverrides={itemOverrides}
-                onOverrideChange={setItemOverrides}
-                onUpdateItem={handleUpdateItem}
-                onUpdateAssignments={handleUpdateAssignments}
-                onUpdateManualSplits={handleUpdateManualSplits}
-                allParticipants={allParticipants}
-              />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div
-          className={`lg:w-1/2 flex flex-col bg-white overflow-hidden ${activeMobileTab === "receipt" || activeMobileTab === "history" ? "hidden lg:flex" : "flex"}`}
-        >
-          <div className="flex-1 lg:grid lg:grid-rows-2 h-full overflow-hidden">
-            <div
-              className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === "summary" ? "hidden lg:flex" : "flex"}`}
-            >
+        {/* Right Panel - Chat & Summary */}
+        <div className={`lg:w-1/2 flex flex-col overflow-hidden transition-all duration-300 ${
+          activeMobileTab === "receipt" ? "hidden lg:flex" : "flex"
+        }`}>
+          <div className="flex-1 grid grid-rows-[1fr_auto] h-full">
+            {/* Chat */}
+            <div className={`overflow-hidden flex flex-col row-start-1 ${
+              activeMobileTab === "summary" ? "hidden lg:flex" : "flex"
+            }`}>
               <ChatInterface
                 messages={messages}
                 onSendMessage={handleSendMessage}
                 isProcessing={isProcessing}
                 disabled={!receiptData || isUploading}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                canUndo={pastAssignments.length > 0}
-                canRedo={futureAssignments.length > 0}
+                onUndo={undo}
+                onRedo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
               />
             </div>
-            <div
-              className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === "chat" ? "hidden lg:flex" : "flex"}`}
-            >
+
+            {/* Summary */}
+            <div className={`overflow-hidden flex flex-col row-start-1 lg:row-start-auto ${
+              activeMobileTab === "chat" ? "hidden lg:flex" : "flex"
+            }`}>
               <SummaryDisplay
                 receiptData={receiptData}
-                assignments={assignments}
-                itemManualSplits={itemManualSplits}
+                assignments={currentHistoryEntry.assignments}
+                itemManualSplits={currentHistoryEntry.itemManualSplits}
                 distributionMethod={distributionMethod}
                 itemOverrides={itemOverrides}
                 onSaveHistory={handleSaveToHistory}
                 isSaved={isCurrentSplitSaved}
               />
             </div>
+
+            {/* Mobile History */}
+            {activeMobileTab === "history" && (
+              <div className="lg:hidden overflow-auto flex-1 p-4 border-t border-slate-200 bg-slate-50/50">
+                <HistorySection
+                  history={history.map((h, i) => ({
+                    id: i.toString(),
+                    ...h,
+                    name: `Split ${new Date(h.timestamp).toLocaleDateString()}`,
+                  }))}
+                  onDelete={handleDeleteHistoryEntry}
+                  onClearAll={handleClearHistory}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
 
+      {/* Global Loading Overlay */}
       {isUploading && (
-        <div className="fixed inset-0 bg-slate-900/10 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center max-w-xs animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[60] bg-slate-900/20 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in duration-200">
+          <div className="bg-white/95 p-12 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-6 max-w-sm text-center animate-pulse">
             <div className="relative">
-              <div className="w-16 h-16 border-4 border-indigo-100 rounded-full animate-pulse"></div>
-              <div className="absolute inset-0 w-16 h-16 border-4 border-t-indigo-600 rounded-full animate-spin"></div>
+              <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                <ReceiptIcon size={32} className="text-indigo-600 animate-pulse" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 border-4 border-white rounded-full animate-ping"></div>
             </div>
-            <h3 className="text-xl font-bold text-slate-900">
-              Scanning Receipt
-            </h3>
-            <p className="text-sm text-slate-500">
-              AI is digitizing your receipt...
-            </p>
+            <div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                Scanning Receipt
+              </h3>
+              <p className="text-slate-600 mt-2">AI is extracting items and prices...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Undo/Redo Toast - Hidden for now, can be enhanced */}
+      {false && (
+        <div className="fixed bottom-6 left-6 right-6 lg:left-auto lg:right-6 lg:w-96 z-[70] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 p-4 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700">Undo available</span>
+            <div className="flex gap-2">
+              <button className="px-4 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl transition-all font-semibold">
+                Undo
+              </button>
+              <button className="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all font-semibold">
+                Redo
+              </button>
+            </div>
           </div>
         </div>
       )}

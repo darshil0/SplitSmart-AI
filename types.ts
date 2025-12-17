@@ -18,6 +18,10 @@ export interface AssignmentMap {
   [itemId: string]: string[];
 }
 
+export interface ItemManualSplitsMap {
+  [itemId: string]: { [name: string]: number };
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';

@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { ReceiptData, AssignmentMap, PersonSummary, DistributionMethod, ItemOverridesMap, HistoryEntry } from '../types';
+import { ReceiptData, AssignmentMap, PersonSummary, DistributionMethod, ItemOverridesMap, HistoryEntry, ItemManualSplitsMap } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { CreditCard, ArrowUpRight, Save, Check } from 'lucide-react';
 
 interface SummaryDisplayProps {
   receiptData: ReceiptData | null;
   assignments: AssignmentMap;
+  itemManualSplits?: ItemManualSplitsMap;
   distributionMethod: DistributionMethod;
   itemOverrides?: ItemOverridesMap;
   onSaveHistory?: (entry: HistoryEntry) => void;
@@ -17,6 +18,7 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#0ea5e9'
 const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ 
   receiptData, 
   assignments, 
+  itemManualSplits = {},
   distributionMethod,
   itemOverrides = {},
   onSaveHistory,
@@ -52,22 +54,19 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     // Second pass: Calculate shares for each person
     receiptData.items.forEach((item) => {
       const assignedPeople = assignments[item.id] || [];
+      const manualSplits = itemManualSplits[item.id];
       const splitCount = assignedPeople.length;
       const override = itemOverrides[item.id];
 
       if (splitCount > 0) {
-        const costPerPerson = item.price / splitCount;
-        
-        // Calculate tax/tip for this specific item
+        // Calculate tax/tip for this specific item (used in MANUAL distribution method)
         let itemTax = 0;
         let itemTip = 0;
 
         if (distributionMethod === 'MANUAL') {
-          // If manual override exists, use it
           if (override?.tax !== undefined) {
             itemTax = override.tax;
           } else if (subtotalOfItemsWithNoTaxOverride > 0) {
-            // Otherwise, get a proportional share of the remaining pool
             itemTax = (item.price / subtotalOfItemsWithNoTaxOverride) * remainingTaxPool;
           }
 
@@ -80,15 +79,25 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
 
         assignedPeople.forEach((person) => {
           initPerson(person);
+          
+          // Use manual amount if available, otherwise fallback to equal split
+          const amountForThisPerson = manualSplits?.[person] !== undefined 
+            ? manualSplits[person] 
+            : (item.price / splitCount);
+
           peopleMap[person].items.push({ 
-            description: item.description + (splitCount > 1 ? ` (1/${splitCount})` : ''), 
-            amount: costPerPerson 
+            description: item.description + (manualSplits ? ' (Custom)' : (splitCount > 1 ? ` (1/${splitCount})` : '')), 
+            amount: amountForThisPerson 
           });
-          peopleMap[person].subtotal += costPerPerson;
+          peopleMap[person].subtotal += amountForThisPerson;
           
           if (distributionMethod === 'MANUAL') {
-            peopleMap[person].taxShare += itemTax / splitCount;
-            peopleMap[person].tipShare += itemTip / splitCount;
+            // Tax/Tip still divided by count of people for that item even in manual mode, 
+            // unless we wanted to weight tax by the custom amount? 
+            // Let's weight it by the custom amount for better precision.
+            const ratio = item.price > 0 ? (amountForThisPerson / item.price) : (1 / splitCount);
+            peopleMap[person].taxShare += itemTax * ratio;
+            peopleMap[person].tipShare += itemTip * ratio;
           }
         });
       }
@@ -141,7 +150,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     });
 
     return peopleList.sort((a, b) => b.totalOwed - a.totalOwed);
-  }, [receiptData, assignments, distributionMethod, itemOverrides]);
+  }, [receiptData, assignments, itemManualSplits, distributionMethod, itemOverrides]);
 
   const realPeopleCount = useMemo(() => 
     summary.filter(p => p.name !== 'Unassigned').length, 

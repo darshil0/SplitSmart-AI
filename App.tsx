@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { AssignmentMap, ChatMessage, ReceiptData, DistributionMethod, ItemOverridesMap, ReceiptItem, HistoryEntry } from './types';
+import { AssignmentMap, ChatMessage, ReceiptData, DistributionMethod, ItemOverridesMap, ReceiptItem, HistoryEntry, ItemManualSplitsMap } from './types';
 import { parseReceiptImage, processChatCommand } from './services/geminiService';
 import ReceiptDisplay from './components/ReceiptDisplay';
 import ChatInterface from './components/ChatInterface';
@@ -13,8 +13,9 @@ import { Split, User, HelpCircle, Receipt as ReceiptIcon, MessageSquare, PieChar
 const App: React.FC = () => {
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [assignments, setAssignments] = useState<AssignmentMap>({});
-  const [pastAssignments, setPastAssignments] = useState<AssignmentMap[]>([]);
-  const [futureAssignments, setFutureAssignments] = useState<AssignmentMap[]>([]);
+  const [itemManualSplits, setItemManualSplits] = useState<ItemManualSplitsMap>({});
+  const [pastAssignments, setPastAssignments] = useState<{ assignments: AssignmentMap, itemManualSplits: ItemManualSplitsMap }[]>([]);
+  const [futureAssignments, setFutureAssignments] = useState<{ assignments: AssignmentMap, itemManualSplits: ItemManualSplitsMap }[]>([]);
   
   const [history, setHistory] = useState<HistoryEntry[]>(() => {
     const saved = localStorage.getItem('splitSmartHistory');
@@ -64,32 +65,35 @@ const App: React.FC = () => {
     return Array.from(people).sort();
   }, [assignments, userName, isNameSet]);
 
-  const pushToHistory = useCallback((newMap: AssignmentMap) => {
-    setPastAssignments(prev => [...prev, assignments]);
+  const pushToHistory = useCallback((newMap: AssignmentMap, newManualSplits: ItemManualSplitsMap) => {
+    setPastAssignments(prev => [...prev, { assignments, itemManualSplits }]);
     setAssignments(newMap);
+    setItemManualSplits(newManualSplits);
     setFutureAssignments([]);
     setIsCurrentSplitSaved(false);
-  }, [assignments]);
+  }, [assignments, itemManualSplits]);
 
   const handleUndo = useCallback(() => {
     if (pastAssignments.length === 0) return;
     const previous = pastAssignments[pastAssignments.length - 1];
     const newPast = pastAssignments.slice(0, -1);
-    setFutureAssignments(prev => [assignments, ...prev]);
-    setAssignments(previous);
+    setFutureAssignments(prev => [{ assignments, itemManualSplits }, ...prev]);
+    setAssignments(previous.assignments);
+    setItemManualSplits(previous.itemManualSplits);
     setPastAssignments(newPast);
     setIsCurrentSplitSaved(false);
-  }, [assignments, pastAssignments]);
+  }, [assignments, itemManualSplits, pastAssignments]);
 
   const handleRedo = useCallback(() => {
     if (futureAssignments.length === 0) return;
     const next = futureAssignments[0];
     const newFuture = futureAssignments.slice(1);
-    setPastAssignments(prev => [...prev, assignments]);
-    setAssignments(next);
+    setPastAssignments(prev => [...prev, { assignments, itemManualSplits }]);
+    setAssignments(next.assignments);
+    setItemManualSplits(next.itemManualSplits);
     setFutureAssignments(newFuture);
     setIsCurrentSplitSaved(false);
-  }, [assignments, futureAssignments]);
+  }, [assignments, itemManualSplits, futureAssignments]);
 
   const handleSaveToHistory = (entry: HistoryEntry) => {
     setHistory(prev => [entry, ...prev]);
@@ -141,6 +145,7 @@ const App: React.FC = () => {
           const data = await parseReceiptImage(base64String);
           setReceiptData(data);
           setAssignments({});
+          setItemManualSplits({});
           setPastAssignments([]);
           setFutureAssignments([]);
           setItemOverrides({});
@@ -180,7 +185,17 @@ const App: React.FC = () => {
   };
 
   const handleUpdateAssignments = (itemId: string, names: string[]) => {
-    pushToHistory({ ...assignments, [itemId]: names });
+    pushToHistory({ ...assignments, [itemId]: names }, itemManualSplits);
+  };
+
+  const handleUpdateManualSplits = (itemId: string, splits: { [name: string]: number } | null) => {
+    const nextManual = { ...itemManualSplits };
+    if (splits === null) {
+      delete nextManual[itemId];
+    } else {
+      nextManual[itemId] = splits;
+    }
+    pushToHistory(assignments, nextManual);
   };
 
   const handleSendMessage = async (text: string) => {
@@ -190,7 +205,7 @@ const App: React.FC = () => {
     setIsProcessing(true);
     try {
       const { assignments: newAssignments, reply } = await processChatCommand(receiptData, assignments, text, userName);
-      pushToHistory(newAssignments);
+      pushToHistory(newAssignments, itemManualSplits);
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: reply, timestamp: Date.now() }]);
     } catch (error) {
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: "I'm having trouble understanding that.", timestamp: Date.now() }]);
@@ -203,7 +218,6 @@ const App: React.FC = () => {
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-inter">
       {showWalkthrough && <WalkthroughModal onClose={() => setShowWalkthrough(false)} />}
       
-      {/* Test Lab Overlay */}
       {showTestLab && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="w-full max-w-2xl h-[80vh] relative">
@@ -247,18 +261,10 @@ const App: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowTestLab(true)}
-            className={`p-2 rounded-xl transition-all ${showTestLab ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
-            title="Open Test Lab"
-          >
+          <button onClick={() => setShowTestLab(true)} className={`p-2 rounded-xl transition-all ${showTestLab ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Open Test Lab">
             <Beaker size={20} />
           </button>
-          <button 
-            onClick={() => setShowWalkthrough(true)}
-            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-            title="Show Walkthrough"
-          >
+          <button onClick={() => setShowWalkthrough(true)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Show Walkthrough">
             <HelpCircle size={20} />
           </button>
         </div>
@@ -295,10 +301,11 @@ const App: React.FC = () => {
            ) : (
              <div className="h-full max-w-2xl mx-auto w-full flex flex-col gap-6">
                 <ReceiptDisplay 
-                  data={receiptData} assignments={assignments} isLoading={isUploading}
+                  data={receiptData} assignments={assignments} itemManualSplits={itemManualSplits} isLoading={isUploading}
                   distributionMethod={distributionMethod} onDistributionChange={setDistributionMethod}
                   itemOverrides={itemOverrides} onOverrideChange={setItemOverrides}
                   onUpdateItem={handleUpdateItem} onUpdateAssignments={handleUpdateAssignments}
+                  onUpdateManualSplits={handleUpdateManualSplits}
                   allParticipants={allParticipants}
                 />
              </div>
@@ -317,7 +324,7 @@ const App: React.FC = () => {
             </div>
             <div className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
               <SummaryDisplay 
-                receiptData={receiptData} assignments={assignments} 
+                receiptData={receiptData} assignments={assignments} itemManualSplits={itemManualSplits}
                 distributionMethod={distributionMethod} itemOverrides={itemOverrides}
                 onSaveHistory={handleSaveToHistory} isSaved={isCurrentSplitSaved}
               />

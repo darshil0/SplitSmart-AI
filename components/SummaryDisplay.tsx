@@ -1,13 +1,15 @@
 import React, { useMemo } from 'react';
-import { ReceiptData, AssignmentMap, PersonSummary, DistributionMethod, ItemOverridesMap } from '../types';
+import { ReceiptData, AssignmentMap, PersonSummary, DistributionMethod, ItemOverridesMap, HistoryEntry } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { CreditCard, ArrowUpRight } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Save, Check } from 'lucide-react';
 
 interface SummaryDisplayProps {
   receiptData: ReceiptData | null;
   assignments: AssignmentMap;
   distributionMethod: DistributionMethod;
   itemOverrides?: ItemOverridesMap;
+  onSaveHistory?: (entry: HistoryEntry) => void;
+  isSaved?: boolean;
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#0ea5e9', '#ec4899'];
@@ -16,7 +18,9 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   receiptData, 
   assignments, 
   distributionMethod,
-  itemOverrides = {}
+  itemOverrides = {},
+  onSaveHistory,
+  isSaved = false
 }) => {
   const summary = useMemo<PersonSummary[]>(() => {
     if (!receiptData) return [];
@@ -144,6 +148,19 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     [summary]
   );
 
+  const handleSave = () => {
+    if (!receiptData || !onSaveHistory) return;
+    const participants = summary.filter(p => p.name !== 'Unassigned').map(p => p.name);
+    onSaveHistory({
+      id: Date.now().toString(),
+      date: Date.now(),
+      total: receiptData.total,
+      currency: receiptData.currency,
+      participants,
+      itemCount: receiptData.items.length
+    });
+  };
+
   if (!receiptData) return (
     <div className="flex-1 flex flex-col items-center justify-center text-slate-300 p-8 border border-dashed border-slate-200 rounded-3xl">
       <CreditCard size={48} className="mb-4 opacity-20" />
@@ -157,9 +174,25 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 h-full flex flex-col animate-in fade-in duration-700">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-bold text-slate-900">Settlement Summary</h3>
-        <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-full">
-           <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-           <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Live</span>
+        <div className="flex items-center gap-2">
+          {onSaveHistory && (
+            <button 
+              onClick={handleSave}
+              disabled={isSaved}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                isSaved 
+                ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100'
+              }`}
+            >
+              {isSaved ? <Check size={14} /> : <Save size={14} />}
+              {isSaved ? 'Saved' : 'Save Split'}
+            </button>
+          )}
+          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl">
+             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+             <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Live</span>
+          </div>
         </div>
       </div>
       

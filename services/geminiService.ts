@@ -3,7 +3,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { ReceiptData, AssignmentMap } from "../types";
 
 // Helper to get AI instance
-// Fix: Use process.env.API_KEY directly when initializing the GoogleGenAI instance per guidelines
 const getAiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 };
@@ -21,16 +20,32 @@ export const parseReceiptImage = async (base64Image: string): Promise<ReceiptDat
       parts: [
         {
           inlineData: {
-            mimeType: "image/png", // Assuming PNG or JPEG, generic handling usually works with correct mime
+            mimeType: "image/png",
             data: cleanBase64,
           },
         },
         {
-          text: `Analyze this receipt. Extract all line items, their prices, and quantities. 
-          Also identify the subtotal, tax, tip (if any), and grand total. 
-          If tip is not explicitly listed, assume 0.
-          Return a strict JSON object matching the defined schema.
-          For the currency, use the symbol found (e.g., "$", "€", "£").`
+          text: `You are a world-class receipt parsing agent. Your goal is to extract structured data from this receipt with 100% accuracy.
+
+CONTEXT & EDGE CASES:
+1. COMPLEX LAYOUTS: Items might have descriptions spanning multiple lines. Prices are usually on the far right. Quantities might be on the left or in the middle.
+2. DISCOUNTS: If you see "Discount", "Coupon", or negative values, include them as items with a negative price.
+3. SERVICE CHARGE: If a service charge is present and separate from the tip, sum it into the 'tip' field or include it as a line item if it's substantial.
+4. MULTIPLE TAXES: Sum all tax components (e.g., GST, PST, VAT) into the single 'tax' field.
+5. NOISE: Ignore store addresses, phone numbers, and marketing text at the bottom.
+6. HANDWRITTEN NOTES: If there are handwritten tips or totals, prioritize them over printed ones if they look like final adjustments.
+7. QUANTITY: If quantity isn't explicitly listed for an item, assume 1.
+
+JSON SCHEMA REQUIREMENTS:
+- 'items': An array of objects.
+- 'items[].id': Create a unique ID like "item_0", "item_1".
+- 'items[].description': The full item name.
+- 'items[].price': The unit price multiplied by quantity (the total for that line).
+- 'items[].quantity': The number of units.
+- 'currency': The currency symbol ($, €, £, etc.). If not found, use "$".
+- 'subtotal', 'tax', 'tip', 'total': Numeric values.
+
+Double-check the math: (sum of item prices) should roughly equal subtotal. total should equal subtotal + tax + tip.`
         },
       ],
     },
@@ -44,23 +59,23 @@ export const parseReceiptImage = async (base64Image: string): Promise<ReceiptDat
             items: {
               type: Type.OBJECT,
               properties: {
-                id: { type: Type.STRING, description: "Unique ID for the item (e.g. item_1)" },
-                description: { type: Type.STRING },
-                price: { type: Type.NUMBER },
-                quantity: { type: Type.NUMBER },
+                id: { type: Type.STRING, description: "Unique identifier for the item." },
+                description: { type: Type.STRING, description: "Clear description of the item." },
+                price: { type: Type.NUMBER, description: "The total price for this line item (qty * unit price)." },
+                quantity: { type: Type.NUMBER, description: "Number of units purchased." },
               },
               required: ["id", "description", "price", "quantity"],
             },
           },
-          subtotal: { type: Type.NUMBER },
-          tax: { type: Type.NUMBER },
-          tip: { type: Type.NUMBER },
-          total: { type: Type.NUMBER },
-          currency: { type: Type.STRING },
+          subtotal: { type: Type.NUMBER, description: "Total before tax and tip." },
+          tax: { type: Type.NUMBER, description: "Total tax amount." },
+          tip: { type: Type.NUMBER, description: "Total tip or service charge." },
+          total: { type: Type.NUMBER, description: "Grand total of the receipt." },
+          currency: { type: Type.STRING, description: "The currency symbol used." },
         },
         required: ["items", "subtotal", "tax", "total", "currency"],
       },
-      thinkingConfig: { thinkingBudget: 2048 }, // Enable thinking for accurate parsing
+      thinkingConfig: { thinkingBudget: 4096 }, // Increased budget for complex reasoning
     },
   });
 
@@ -70,6 +85,12 @@ export const parseReceiptImage = async (base64Image: string): Promise<ReceiptDat
 
   try {
     const data = JSON.parse(response.text) as ReceiptData;
+    // Basic validation to ensure numbers are valid
+    data.subtotal = Number(data.subtotal) || 0;
+    data.tax = Number(data.tax) || 0;
+    data.tip = Number(data.tip) || 0;
+    data.total = Number(data.total) || 0;
+    
     return data;
   } catch (error) {
     console.error("Failed to parse JSON response:", response.text);
@@ -87,42 +108,26 @@ export const processChatCommand = async (
   const ai = getAiClient();
 
   const userContext = currentUser 
-    ? `IMPORTANT: The user interacting with you is named "${currentUser}". If the user mentions "I", "me", "my", or "myself", assign the items to "${currentUser}".` 
+    ? `The user is "${currentUser}". "I/me/my" refers to "${currentUser}".` 
     : '';
 
   const prompt = `
-    You are a bill-splitting assistant.
-    
+    You are a bill-splitting assistant. 
     ${userContext}
 
-    Current Receipt Items:
-    ${JSON.stringify(receiptData.items)}
+    RECEIPT: ${JSON.stringify(receiptData.items)}
+    CURRENT ASSIGNMENTS: ${JSON.stringify(currentAssignments)}
+    USER COMMAND: "${userMessage}"
 
-    Current Assignments (Item ID -> [Array of Names]):
-    ${JSON.stringify(currentAssignments)}
+    RULES:
+    - If user says "X had Y", add X to Y's owners.
+    - If user says "Split X between A, B, C", set Y's owners to [A, B, C].
+    - If user says "Everyone shared X", set owners to all known participants.
+    - If user says "Remove X from Y", filter X out.
+    - Use fuzzy matching for item names.
+    - Return the FULL updated assignment map.
 
-    User Command: "${userMessage}"
-
-    Task:
-    1. Interpret the user's natural language command to update the assignments.
-    2. Support statements like "Tom had the burger", "Alice and Bob shared the pizza", "Remove Sarah from the salad".
-    3. If an item name in the command is fuzzy (e.g. "drinks" for "Coke" and "Beer"), try to match reasonably.
-    4. Return the *complete* updated assignment map for all items that have assignments.
-    5. Provide a short, friendly, conversational reply confirming what you did.
-
-    Note:
-    - If a person is added to an item, append them to the list for that item ID.
-    - If "shared", ensure all names are in the list.
-    - If "remove", filter them out.
-    - If someone claims the whole item (e.g. "I had the steak"), replace existing assignments for that item unless implied otherwise.
-    
-    Output JSON Schema:
-    {
-      "updatedAssignments": [
-         { "itemId": "item_1", "owners": ["Tom", "Jerry"] }
-      ],
-      "reply": "string"
-    }
+    Output format: JSON with "updatedAssignments" (array of {itemId, owners}) and "reply" (string).
   `;
 
   const response = await ai.models.generateContent({
@@ -135,7 +140,6 @@ export const processChatCommand = async (
         properties: {
           updatedAssignments: {
             type: Type.ARRAY,
-            description: "List of items and their assigned owners",
             items: {
                 type: Type.OBJECT,
                 properties: {
@@ -149,7 +153,7 @@ export const processChatCommand = async (
         },
         required: ["updatedAssignments", "reply"],
       },
-      thinkingConfig: { thinkingBudget: 4096 }, // Reasoning about fuzzy matching
+      thinkingConfig: { thinkingBudget: 2048 },
     },
   });
 

@@ -45,3 +45,12 @@ export interface ItemTaxTipOverride {
 export interface ItemOverridesMap {
   [itemId: string]: ItemTaxTipOverride;
 }
+
+export interface HistoryEntry {
+  id: string;
+  date: number;
+  total: number;
+  currency: string;
+  participants: string[];
+  itemCount: number;
+}

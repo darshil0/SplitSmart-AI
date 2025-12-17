@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ReceiptData, AssignmentMap, DistributionMethod, ItemOverridesMap, ReceiptItem } from '../types';
-import { User, Receipt as ReceiptIcon, Settings2, Edit3, Check, X, Plus, Users, Percent } from 'lucide-react';
+import { User, Receipt as ReceiptIcon, Settings2, Edit3, Check, X, Plus, Users, AlertCircle } from 'lucide-react';
 
 interface ReceiptDisplayProps {
   data: ReceiptData | null;
@@ -13,6 +13,12 @@ interface ReceiptDisplayProps {
   onUpdateItem: (item: ReceiptItem) => void;
   onUpdateAssignments: (itemId: string, names: string[]) => void;
   allParticipants: string[];
+}
+
+interface ValidationErrors {
+  description?: string;
+  price?: string;
+  quantity?: string;
 }
 
 const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({ 
@@ -29,31 +35,53 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
 }) => {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<{description: string, price: string, quantity: string} | null>(null);
+  const [errors, setErrors] = useState<ValidationErrors>({});
   const [splittingItemId, setSplittingItemId] = useState<string | null>(null);
   const [newPersonName, setNewPersonName] = useState('');
+  const [nameError, setNameError] = useState(false);
 
-  if (isLoading) return null;
-
-  if (!data) return null;
+  const validate = (desc: string, pr: string, qty: string) => {
+    const newErrors: ValidationErrors = {};
+    if (!desc.trim()) newErrors.description = "Required";
+    const p = parseFloat(pr);
+    if (isNaN(p) || p < 0) newErrors.price = "Invalid price";
+    const q = parseInt(qty);
+    if (isNaN(q) || q < 1) newErrors.quantity = "Min 1";
+    return newErrors;
+  };
 
   const startEditing = (item: ReceiptItem) => {
     setEditingItemId(item.id);
     setEditFields({ description: item.description, price: item.price.toString(), quantity: item.quantity.toString() });
+    setErrors({});
     setSplittingItemId(null);
   };
 
   const cancelEditing = () => {
     setEditingItemId(null);
     setEditFields(null);
+    setErrors({});
   };
 
   const saveEditing = (id: string) => {
     if (!editFields) return;
+    const currentErrors = validate(editFields.description, editFields.price, editFields.quantity);
+    if (Object.keys(currentErrors).length > 0) {
+      setErrors(currentErrors);
+      return;
+    }
+
     const price = parseFloat(editFields.price);
     const quantity = parseInt(editFields.quantity);
-    if (isNaN(price) || isNaN(quantity)) return;
     onUpdateItem({ id, description: editFields.description, price, quantity });
     cancelEditing();
+  };
+
+  const handleEditChange = (field: keyof typeof editFields, value: string) => {
+    if (!editFields) return;
+    const updated = { ...editFields, [field]: value };
+    setEditFields(updated);
+    setErrors(validate(updated.description, updated.price, updated.quantity));
   };
 
   const toggleSplitting = (itemId: string) => {
@@ -73,6 +101,9 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
         onUpdateAssignments(itemId, [...current, newPersonName.trim()]);
       }
       setNewPersonName('');
+      setNameError(false);
+    } else {
+      setNameError(true);
     }
   };
 
@@ -95,6 +126,8 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
     
     onOverrideChange(newOverrides);
   };
+
+  if (isLoading || !data) return null;
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-500">
@@ -120,6 +153,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
             const override = itemOverrides[item.id];
             const isEditing = editingItemId === item.id;
             const isSplitting = splittingItemId === item.id;
+            const hasErrors = isEditing && Object.keys(errors).length > 0;
             
             return (
               <div 
@@ -128,27 +162,32 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                   isEditing || isSplitting 
                     ? 'border-indigo-400 bg-white shadow-lg ring-4 ring-indigo-50 z-10 scale-[1.02]' 
                     : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'
-                }`}
+                } ${hasErrors ? 'border-rose-400 ring-rose-50' : ''}`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0 pr-4">
                     {isEditing && editFields ? (
                       <div className="flex flex-col gap-2">
-                        <input 
-                          className="w-full text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                          value={editFields.description}
-                          autoFocus
-                          onChange={(e) => setEditFields({...editFields, description: e.target.value})}
-                        />
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <input 
+                            className={`w-full text-sm font-bold text-slate-900 bg-white border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${errors.description ? 'border-rose-300' : 'border-slate-300'}`}
+                            value={editFields.description}
+                            autoFocus
+                            placeholder="Description"
+                            onChange={(e) => handleEditChange('description', e.target.value)}
+                          />
+                          {errors.description && <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-rose-500">{errors.description}</span>}
+                        </div>
+                        <div className="flex items-center gap-3 mt-2">
+                          <div className="flex items-center gap-2 relative">
                             <span className="text-[10px] font-black text-slate-400 uppercase">Qty</span>
                             <input 
                               type="number"
-                              className="w-16 text-xs bg-white border border-slate-300 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500"
+                              className={`w-16 text-xs bg-white border rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500 ${errors.quantity ? 'border-rose-300' : 'border-slate-300'}`}
                               value={editFields.quantity}
-                              onChange={(e) => setEditFields({...editFields, quantity: e.target.value})}
+                              onChange={(e) => handleEditChange('quantity', e.target.value)}
                             />
+                            {errors.quantity && <span className="absolute -bottom-4 left-8 text-[9px] font-bold text-rose-500">{errors.quantity}</span>}
                           </div>
                         </div>
                       </div>
@@ -167,14 +206,15 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                   <div className="text-right">
                     {isEditing && editFields ? (
                       <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">{data.currency}</span>
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">{data.currency}</span>
                         <input 
                           type="number"
                           step="0.01"
-                          className="w-24 pl-5 pr-2 py-2 text-right text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                          className={`w-24 pl-5 pr-2 py-2 text-right text-sm font-mono font-bold text-slate-900 bg-white border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 ${errors.price ? 'border-rose-300' : 'border-slate-300'}`}
                           value={editFields.price}
-                          onChange={(e) => setEditFields({...editFields, price: e.target.value})}
+                          onChange={(e) => handleEditChange('price', e.target.value)}
                         />
+                        {errors.price && <span className="absolute -bottom-4 right-0 text-[9px] font-bold text-rose-500">{errors.price}</span>}
                       </div>
                     ) : (
                       <div className="text-slate-900 font-mono font-bold bg-white px-2 py-1 rounded-lg border border-slate-100">
@@ -184,8 +224,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                   </div>
                 </div>
 
-                {/* Assignment & Controls */}
-                <div className="flex justify-between items-center mt-3">
+                <div className="flex justify-between items-center mt-4">
                   <div className="flex flex-wrap gap-1.5 flex-1 mr-2">
                     {assignedTo.length > 0 ? (
                       assignedTo.map((person, idx) => (
@@ -207,7 +246,10 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                   <div className="flex gap-1">
                     {isEditing ? (
                       <>
-                        <button onClick={() => saveEditing(item.id)} className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all">
+                        <button 
+                          onClick={() => saveEditing(item.id)} 
+                          className={`p-2 rounded-xl transition-all ${hasErrors ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                        >
                           <Check size={16} />
                         </button>
                         <button onClick={cancelEditing} className="p-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all">
@@ -233,7 +275,6 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                   </div>
                 </div>
 
-                {/* Split UI */}
                 {isSplitting && (
                   <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-indigo-100 animate-in slide-in-from-top-2">
                     <div className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Assign to people</div>
@@ -252,26 +293,36 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                         </button>
                       ))}
                     </div>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="New name..."
-                        className="flex-1 text-xs bg-white border border-slate-200 rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                        value={newPersonName}
-                        onChange={(e) => setNewPersonName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddNewPerson(item.id)}
-                      />
-                      <button 
-                        onClick={() => handleAddNewPerson(item.id)}
-                        className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100"
-                      >
-                        <Plus size={16} />
-                      </button>
+                    <div>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="New name..."
+                          className={`flex-1 text-xs bg-white border rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${nameError ? 'border-rose-400 ring-rose-50' : 'border-slate-200'}`}
+                          value={newPersonName}
+                          onChange={(e) => {
+                            setNewPersonName(e.target.value);
+                            if (e.target.value.trim()) setNameError(false);
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddNewPerson(item.id)}
+                        />
+                        <button 
+                          onClick={() => handleAddNewPerson(item.id)}
+                          className="bg-indigo-600 text-white p-2 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      {nameError && (
+                        <div className="flex items-center gap-1 mt-1 text-rose-500 animate-in fade-in slide-in-from-left-2">
+                          <AlertCircle size={10} />
+                          <span className="text-[10px] font-bold">Please enter a name</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Manual Overrides for Tax/Tip */}
                 {distributionMethod === 'MANUAL' && (
                   <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap gap-3 animate-in slide-in-from-top-1 duration-200">
                     <div className="flex-1 min-w-[120px]">
@@ -283,7 +334,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           step="0.01" 
                           min="0"
                           placeholder="Auto-calc"
-                          className="w-full pl-6 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          className={`w-full pl-6 pr-3 py-1.5 bg-white border rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${override?.tax !== undefined && override.tax < 0 ? 'border-rose-400' : 'border-slate-200'}`}
                           value={override?.tax ?? ''}
                           onChange={(e) => handleOverrideChange(item.id, 'tax', e.target.value)}
                         />
@@ -298,7 +349,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           step="0.01" 
                           min="0"
                           placeholder="Auto-calc"
-                          className="w-full pl-6 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          className={`w-full pl-6 pr-3 py-1.5 bg-white border rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${override?.tip !== undefined && override.tip < 0 ? 'border-rose-400' : 'border-slate-200'}`}
                           value={override?.tip ?? ''}
                           onChange={(e) => handleOverrideChange(item.id, 'tip', e.target.value)}
                         />
@@ -311,7 +362,6 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
           })}
         </div>
 
-        {/* Totals & Settings */}
         <div className="mt-8 pt-6 border-t border-slate-100">
           <div className="grid grid-cols-2 gap-x-12 gap-y-2 mb-6 text-sm">
             <div className="flex justify-between text-slate-500 font-medium"><span>Subtotal</span><span>{data.currency}{data.subtotal.toFixed(2)}</span></div>
@@ -340,11 +390,6 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                 </button>
               ))}
             </div>
-            <p className="mt-3 text-[10px] text-slate-500 italic px-1">
-              {distributionMethod === 'MANUAL' 
-                ? 'Tip: You can now set exact tax/tip amounts per item above. Residual amounts split proportionally.' 
-                : 'Tax and tip are distributed based on your selected strategy.'}
-            </p>
           </div>
         </div>
       </div>

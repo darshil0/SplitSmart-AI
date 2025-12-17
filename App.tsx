@@ -7,7 +7,8 @@ import SummaryDisplay from './components/SummaryDisplay';
 import ReceiptUploader from './components/ReceiptUploader';
 import WalkthroughModal from './components/WalkthroughModal';
 import HistorySection from './components/HistorySection';
-import { Split, User, HelpCircle, Receipt as ReceiptIcon, MessageSquare, PieChart as PieChartIcon, History as HistoryIcon, AlertCircle } from 'lucide-react';
+import TestDashboard from './components/TestDashboard';
+import { Split, User, HelpCircle, Receipt as ReceiptIcon, MessageSquare, PieChart as PieChartIcon, History as HistoryIcon, Beaker, X } from 'lucide-react';
 
 const App: React.FC = () => {
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
@@ -31,13 +32,14 @@ const App: React.FC = () => {
   const [distributionMethod, setDistributionMethod] = useState<DistributionMethod>('PROPORTIONAL');
   const [activeMobileTab, setActiveMobileTab] = useState<'receipt' | 'chat' | 'summary' | 'history'>('receipt');
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [showTestLab, setShowTestLab] = useState(false);
 
   // Sync history to localStorage
   useEffect(() => {
     localStorage.setItem('splitSmartHistory', JSON.stringify(history));
   }, [history]);
 
-  // Initial welcome message and check for walkthrough
+  // Initial welcome message
   useEffect(() => {
     setMessages([{
       id: 'init',
@@ -53,7 +55,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Compute list of all unique people mentioned so far
   const allParticipants = useMemo(() => {
     const people = new Set<string>();
     if (userName && isNameSet) people.add(userName);
@@ -67,14 +68,13 @@ const App: React.FC = () => {
     setPastAssignments(prev => [...prev, assignments]);
     setAssignments(newMap);
     setFutureAssignments([]);
-    setIsCurrentSplitSaved(false); // Reset saved status on any change
+    setIsCurrentSplitSaved(false);
   }, [assignments]);
 
   const handleUndo = useCallback(() => {
     if (pastAssignments.length === 0) return;
     const previous = pastAssignments[pastAssignments.length - 1];
     const newPast = pastAssignments.slice(0, -1);
-    
     setFutureAssignments(prev => [assignments, ...prev]);
     setAssignments(previous);
     setPastAssignments(newPast);
@@ -85,7 +85,6 @@ const App: React.FC = () => {
     if (futureAssignments.length === 0) return;
     const next = futureAssignments[0];
     const newFuture = futureAssignments.slice(1);
-    
     setPastAssignments(prev => [...prev, assignments]);
     setAssignments(next);
     setFutureAssignments(newFuture);
@@ -147,19 +146,16 @@ const App: React.FC = () => {
           setItemOverrides({});
           setDistributionMethod('PROPORTIONAL');
           setIsCurrentSplitSaved(false);
-          
           setMessages(prev => [...prev, {
-            id: Date.now().toString(),
+            id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: `I found ${data.items.length} items. You can now tell me who ordered what! (e.g. "Tom had the burger")`,
+            content: `I found ${data.items.length} items. You can now tell me who ordered what!`,
             timestamp: Date.now()
           }]);
-          
           setActiveMobileTab('receipt');
         } catch (error) {
-          console.error(error);
           setMessages(prev => [...prev, {
-            id: Date.now().toString(),
+            id: (Date.now() + 1).toString(),
             role: 'assistant',
             content: 'Sorry, I had trouble reading that receipt. Please try a clearer image.',
             timestamp: Date.now()
@@ -171,7 +167,6 @@ const App: React.FC = () => {
       reader.readAsDataURL(file);
     } catch (error) {
       setIsUploading(false);
-      console.error("File reading error", error);
     }
   };
 
@@ -198,7 +193,7 @@ const App: React.FC = () => {
       pushToHistory(newAssignments);
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: reply, timestamp: Date.now() }]);
     } catch (error) {
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: "I'm having trouble understanding that. Try being more specific!", timestamp: Date.now() }]);
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: "I'm having trouble understanding that.", timestamp: Date.now() }]);
     } finally {
       setIsProcessing(false);
     }
@@ -208,6 +203,21 @@ const App: React.FC = () => {
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-inter">
       {showWalkthrough && <WalkthroughModal onClose={() => setShowWalkthrough(false)} />}
       
+      {/* Test Lab Overlay */}
+      {showTestLab && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-2xl h-[80vh] relative">
+            <button 
+              onClick={() => setShowTestLab(false)}
+              className="absolute -top-12 right-0 p-2 text-white bg-slate-800 hover:bg-slate-700 rounded-full shadow-xl transition-all"
+            >
+              <X size={24} />
+            </button>
+            <TestDashboard />
+          </div>
+        </div>
+      )}
+
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
@@ -233,13 +243,17 @@ const App: React.FC = () => {
                 className="bg-transparent border-none focus:outline-none text-sm text-slate-800 w-24 sm:w-32 placeholder-slate-400 font-medium"
               />
             </div>
-            {userNameError && (
-              <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-rose-500 animate-in fade-in slide-in-from-top-1">Enter your name</span>
-            )}
           </div>
         </div>
         
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowTestLab(true)}
+            className={`p-2 rounded-xl transition-all ${showTestLab ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+            title="Open Test Lab"
+          >
+            <Beaker size={20} />
+          </button>
           <button 
             onClick={() => setShowWalkthrough(true)}
             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
@@ -247,127 +261,66 @@ const App: React.FC = () => {
           >
             <HelpCircle size={20} />
           </button>
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden md:block border-l border-slate-200 pl-4 ml-2">
-            AI Engine v3
-          </div>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         <div className="lg:hidden flex bg-white border-b border-slate-200 p-1">
-          <button 
-            onClick={() => setActiveMobileTab('receipt')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'receipt' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}
-          >
+          <button onClick={() => setActiveMobileTab('receipt')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'receipt' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}>
             <ReceiptIcon size={18} /> Receipt
           </button>
-          <button 
-            onClick={() => setActiveMobileTab('chat')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'chat' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}
-          >
+          <button onClick={() => setActiveMobileTab('chat')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'chat' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}>
             <MessageSquare size={18} /> Chat
           </button>
-          <button 
-            onClick={() => setActiveMobileTab('summary')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'summary' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}
-          >
+          <button onClick={() => setActiveMobileTab('summary')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'summary' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}>
             <PieChartIcon size={18} /> Total
           </button>
-          <button 
-            onClick={() => setActiveMobileTab('history')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'history' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}
-          >
+          <button onClick={() => setActiveMobileTab('history')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeMobileTab === 'history' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500'}`}>
             <HistoryIcon size={18} /> History
           </button>
         </div>
 
         <div className={`lg:hidden flex-1 overflow-hidden p-4 bg-slate-50 ${activeMobileTab === 'history' ? 'block' : 'hidden'}`}>
-           <HistorySection 
-             history={history} 
-             onDelete={handleDeleteHistoryEntry} 
-             onClearAll={handleClearHistory} 
-           />
+           <HistorySection history={history} onDelete={handleDeleteHistoryEntry} onClearAll={handleClearHistory} />
         </div>
 
         <div className={`flex-1 lg:w-1/2 p-4 sm:p-6 overflow-y-auto border-r border-slate-200 bg-slate-50/30 ${activeMobileTab !== 'receipt' ? 'hidden lg:block' : 'block'}`}>
            {!receiptData ? (
              <div className="h-full flex flex-col justify-center max-w-xl mx-auto w-full">
-               <div className="mb-6">
-                 <ReceiptUploader onUpload={handleFileUpload} isProcessing={isUploading} />
-               </div>
-               
-               <div className="hidden lg:block mt-2">
-                 <HistorySection 
-                    history={history} 
-                    onDelete={handleDeleteHistoryEntry} 
-                    onClearAll={handleClearHistory} 
-                 />
-               </div>
-
-               <div className="mt-8 grid grid-cols-2 gap-4">
-                 <div className="bg-white p-4 rounded-2xl border border-slate-200 text-center">
-                   <div className="text-2xl mb-1">📸</div>
-                   <div className="text-xs font-bold text-slate-800">Clear Photo</div>
-                   <div className="text-[10px] text-slate-500">Ensure items & prices are visible</div>
-                 </div>
-                 <div className="bg-white p-4 rounded-2xl border border-slate-200 text-center">
-                   <div className="text-2xl mb-1">🤖</div>
-                   <div className="text-xs font-bold text-slate-800">AI Powered</div>
-                   <div className="text-[10px] text-slate-500">Gemini 3 Pro handles the math</div>
-                 </div>
+               <ReceiptUploader onUpload={handleFileUpload} isProcessing={isUploading} />
+               <div className="hidden lg:block mt-6">
+                 <HistorySection history={history} onDelete={handleDeleteHistoryEntry} onClearAll={handleClearHistory} />
                </div>
              </div>
            ) : (
              <div className="h-full max-w-2xl mx-auto w-full flex flex-col gap-6">
                 <ReceiptDisplay 
-                  data={receiptData} 
-                  assignments={assignments} 
-                  isLoading={isUploading}
-                  distributionMethod={distributionMethod}
-                  onDistributionChange={setDistributionMethod}
-                  itemOverrides={itemOverrides}
-                  onOverrideChange={setItemOverrides}
-                  onUpdateItem={handleUpdateItem}
-                  onUpdateAssignments={handleUpdateAssignments}
+                  data={receiptData} assignments={assignments} isLoading={isUploading}
+                  distributionMethod={distributionMethod} onDistributionChange={setDistributionMethod}
+                  itemOverrides={itemOverrides} onOverrideChange={setItemOverrides}
+                  onUpdateItem={handleUpdateItem} onUpdateAssignments={handleUpdateAssignments}
                   allParticipants={allParticipants}
                 />
-                <div className="hidden lg:block mt-auto pt-6 border-t border-slate-200">
-                   <button 
-                     className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
-                   >
-                     <HistoryIcon size={12} /> Recent History ({history.length})
-                   </button>
-                </div>
              </div>
            )}
         </div>
 
         <div className={`lg:w-1/2 flex flex-col bg-white overflow-hidden ${activeMobileTab === 'receipt' || activeMobileTab === 'history' ? 'hidden lg:flex' : 'flex'}`}>
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 lg:grid lg:grid-rows-2 h-full overflow-hidden">
-              <div className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === 'summary' ? 'hidden lg:flex' : 'flex'}`}>
-                 <ChatInterface 
-                   messages={messages} 
-                   onSendMessage={handleSendMessage}
-                   isProcessing={isProcessing}
-                   disabled={!receiptData || isUploading}
-                   onUndo={handleUndo}
-                   onRedo={handleRedo}
-                   canUndo={pastAssignments.length > 0}
-                   canRedo={futureAssignments.length > 0}
-                 />
-              </div>
-              
-              <div className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
-                <SummaryDisplay 
-                  receiptData={receiptData} 
-                  assignments={assignments} 
-                  distributionMethod={distributionMethod}
-                  itemOverrides={itemOverrides}
-                  onSaveHistory={handleSaveToHistory}
-                  isSaved={isCurrentSplitSaved}
-                />
-              </div>
+          <div className="flex-1 lg:grid lg:grid-rows-2 h-full overflow-hidden">
+            <div className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === 'summary' ? 'hidden lg:flex' : 'flex'}`}>
+               <ChatInterface 
+                 messages={messages} onSendMessage={handleSendMessage}
+                 isProcessing={isProcessing} disabled={!receiptData || isUploading}
+                 onUndo={handleUndo} onRedo={handleRedo}
+                 canUndo={pastAssignments.length > 0} canRedo={futureAssignments.length > 0}
+               />
+            </div>
+            <div className={`lg:row-span-1 min-h-0 flex flex-col p-4 sm:p-6 ${activeMobileTab === 'chat' ? 'hidden lg:flex' : 'flex'}`}>
+              <SummaryDisplay 
+                receiptData={receiptData} assignments={assignments} 
+                distributionMethod={distributionMethod} itemOverrides={itemOverrides}
+                onSaveHistory={handleSaveToHistory} isSaved={isCurrentSplitSaved}
+              />
             </div>
           </div>
         </div>
@@ -381,7 +334,7 @@ const App: React.FC = () => {
                 <div className="absolute inset-0 w-16 h-16 border-4 border-t-indigo-600 rounded-full animate-spin"></div>
              </div>
              <h3 className="text-xl font-bold text-slate-900">Scanning Receipt</h3>
-             <p className="text-sm text-slate-500">Our AI is digitizing the items, tax, and tip for you...</p>
+             <p className="text-sm text-slate-500">AI is digitizing your receipt...</p>
           </div>
         </div>
       )}

@@ -14,7 +14,6 @@ export interface ReceiptData {
   currency: string;
 }
 
-// Maps Item ID to an array of person names who are paying for it
 export interface AssignmentMap {
   [itemId: string]: string[];
 }
@@ -53,4 +52,16 @@ export interface HistoryEntry {
   currency: string;
   participants: string[];
   itemCount: number;
+}
+
+// Testing Framework Types
+export type TestStatus = 'idle' | 'running' | 'passed' | 'failed';
+
+export interface TestResult {
+  id: string;
+  name: string;
+  category: 'BVT' | 'E2E' | 'Regression' | 'Edge Case' | 'Scrum';
+  status: TestStatus;
+  error?: string;
+  duration?: number;
 }

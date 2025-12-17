@@ -4,7 +4,7 @@ import { ReceiptData, AssignmentMap } from "../types";
 const API_KEY = import.meta.env.VITE_API_KEY as string;
 
 if (!API_KEY) {
-  alert("VITE_API_KEY is not defined. Please set it in your .env file.");
+  console.error("VITE_API_KEY is not defined. Please set it in your .env file.");
   throw new Error("VITE_API_KEY is not defined.");
 }
 
@@ -12,6 +12,34 @@ const ai = new GoogleGenerativeAI(API_KEY);
 
 const generationConfig = {
   responseMimeType: "application/json",
+  temperature: 0.1,
+};
+
+// Define JSON schema for receipt parsing
+const receiptSchema = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          description: { type: "string" },
+          price: { type: "number" },
+          quantity: { type: "number" },
+        },
+        required: ["id", "description", "price", "quantity"],
+      },
+    },
+    currency: { type: "string" },
+    subtotal: { type: "number" },
+    tax: { type: "number" },
+    tip: { type: "number" },
+    total: { type: "number" },
+  },
+  required: ["items", "currency", "subtotal", "tax", "tip", "total"],
+  additionalProperties: false,
 };
 
 // 1. Parse Receipt Image
@@ -20,53 +48,62 @@ export const parseReceiptImage = async (
 ): Promise<ReceiptData> => {
   const model = ai.getGenerativeModel({
     model: "gemini-1.5-pro-latest",
-    generationConfig,
-    systemInstruction: `You are a world-class receipt parsing agent. Your goal is to extract structured data from this receipt with 100% accuracy.
+    generationConfig: {
+      ...generationConfig,
+      responseSchema: receiptSchema,
+    },
+    systemInstruction: `You are a world-class receipt parsing agent. Extract structured data from this receipt with maximum accuracy.
 
 CONTEXT & EDGE CASES:
-1. COMPLEX LAYOUTS: Items might have descriptions spanning multiple lines. Prices are usually on the far right. Quantities might be on the left or in the middle.
-2. DISCOUNTS: If you see "Discount", "Coupon", or negative values, include them as items with a negative price.
-3. SERVICE CHARGE: If a service charge is present and separate from the tip, sum it into the 'tip' field or include it as a line item if it's substantial.
-4. MULTIPLE TAXES: Sum all tax components (e.g., GST, PST, VAT) into the single 'tax' field.
-5. NOISE: Ignore store addresses, phone numbers, and marketing text at the bottom.
-6. HANDWRITTEN NOTES: If there are handwritten tips or totals, prioritize them over printed ones if they look like final adjustments.
-7. QUANTITY: If quantity isn't explicitly listed for an item, assume 1.
+- Items might have descriptions spanning multiple lines. Prices usually align right.
+- Discounts/Coupons: Include as items with negative prices.
+- Service charges: Add to 'tip' or as separate line item.
+- Multiple taxes: Sum into single 'tax' field.
+- Ignore store addresses, phone numbers, marketing text.
+- Handwritten notes: Prioritize final adjustments.
+- Quantity: Assume 1 if not specified.
 
-JSON SCHEMA REQUIREMENTS:
-- 'items': An array of objects.
-- 'items[].id': Create a unique ID like "item_0", "item_1".
-- 'items[].description': The full item name.
-- 'items[].price': The unit price multiplied by quantity (the total for that line).
-- 'items[].quantity': The number of units.
-- 'currency': The currency symbol ($, €, £, etc.). If not found, use "$".
-- 'subtotal', 'tax', 'tip', 'total': Numeric values.
-
-Double-check the math: (sum of item prices) should roughly equal subtotal. total should equal subtotal + tax + tip.`,
+Ensure: sum(items[].price) ≈ subtotal, total = subtotal + tax + tip`,
   });
 
-  const cleanBase64 = base64Image.replace(
-    /^data:image\/(png|jpeg|jpg|webp);base64,/,
-    "",
-  );
+  // Clean base64 data URL prefix and detect mime type
+  let cleanBase64 = base64Image;
+  let mimeType = "image/png";
+  
+  if (base64Image.startsWith("data:image/")) {
+    const matches = base64Image.match(/^data:image\/([a-zA-Z0-9]+);base64,/);
+    if (matches) {
+      mimeType = `image/${matches[1]}`;
+      cleanBase64 = base64Image.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, "");
+    }
+  }
 
   const imagePart = {
     inlineData: {
       data: cleanBase64,
-      mimeType: "image/png",
+      mimeType,
     },
   };
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [imagePart] }],
-    });
-
+    const result = await model.generateContent([imagePart]);
     const response = result.response;
-    const jsonText = response.text();
+    
+    if (!response.text()) {
+      throw new Error("Empty response from AI");
+    }
 
-    const data = JSON.parse(jsonText) as ReceiptData;
+    const data = JSON.parse(response.text()) as ReceiptData;
 
-    // Basic validation
+    // Validate and sanitize numeric fields
+    data.items = (data.items || []).map((item, index) => ({
+      ...item,
+      id: item.id || `item_${index}`,
+      price: Number(item.price) || 0,
+      quantity: Number(item.quantity) || 1,
+    }));
+
+    data.currency = data.currency || "$";
     data.subtotal = Number(data.subtotal) || 0;
     data.tax = Number(data.tax) || 0;
     data.tip = Number(data.tip) || 0;
@@ -76,7 +113,7 @@ Double-check the math: (sum of item prices) should roughly equal subtotal. total
   } catch (error) {
     console.error("Failed to parse receipt image:", error);
     throw new Error(
-      "AI could not process the receipt image. Please check the console for more details.",
+      "AI could not process the receipt image. Ensure it's a clear receipt image and try again."
     );
   }
 };
@@ -89,51 +126,71 @@ export const processChatCommand = async (
   currentUser?: string,
 ): Promise<{ assignments: AssignmentMap; reply: string }> => {
   const userContext = currentUser
-    ? `The user is "${currentUser}". "I/me/my" refers to "${currentUser}".`
+    ? `Current user: "${currentUser}". "I/me/my" refers to "${currentUser}".`
     : "";
+
+  // Define schema for chat response
+  const chatSchema = {
+    type: "object",
+    properties: {
+      updatedAssignments: {
+        type: "object",
+        additionalProperties: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+      reply: { type: "string" },
+    },
+    required: ["updatedAssignments", "reply"],
+    additionalProperties: false,
+  };
 
   const model = ai.getGenerativeModel({
     model: "gemini-1.5-pro-latest",
-    generationConfig,
-    systemInstruction: `You are a bill-splitting assistant. Your task is to update item assignments based on user commands.
+    generationConfig: {
+      ...generationConfig,
+      responseSchema: chatSchema,
+    },
+    systemInstruction: `You are a bill-splitting assistant. Update item assignments based on user commands.
 
-    RULES:
-    - If user says "X had Y", add X to Y's owners.
-    - If user says "Split X between A, B, C", set Y's owners to [A, B, C].
-    - If user says "Everyone shared X", set owners to all known participants.
-    - If user says "Remove X from Y", filter X out.
-    - Use fuzzy matching for item names.
-    - Always return the FULL, updated assignment map.
+RULES:
+- "X had Y" → Add X to Y's owners
+- "Split X between A, B, C" → Set X's owners to [A, B, C]
+- "Everyone shared X" → Set to all known participants
+- "Remove X from Y" → Remove X from Y's owners
+- Use fuzzy matching for names/items
+- Preserve existing assignments unless modified
+- Return COMPLETE updated assignments
 
-    Output format MUST be a JSON object with two keys:
-    1. "updatedAssignments": An object where keys are item IDs and values are arrays of owner names (e.g., {"item_0": ["Alice", "Bob"]}).
-    2. "reply": A friendly, conversational string confirming the action taken.`,
+Output ONLY valid JSON matching the schema.`,
   });
 
-  const prompt = `
-    ${userContext}
+  const prompt = `${userContext}
 
-    RECEIPT: ${JSON.stringify(receiptData.items)}
-    CURRENT ASSIGNMENTS: ${JSON.stringify(currentAssignments)}
-    USER COMMAND: "${userMessage}"
-  `;
+RECEIPT ITEMS: ${JSON.stringify(receiptData.items)}
+CURRENT ASSIGNMENTS: ${JSON.stringify(currentAssignments)}
+USER COMMAND: ${userMessage}`;
 
   try {
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const jsonText = response.text();
+    
+    if (!response.text()) {
+      throw new Error("Empty response from AI");
+    }
 
-    const parsedResult = JSON.parse(jsonText);
-
-    const validAssignments: AssignmentMap =
-      parsedResult.updatedAssignments || {};
+    const parsedResult = JSON.parse(response.text());
 
     return {
-      assignments: validAssignments,
-      reply: parsedResult.reply || "I've updated the assignments.",
+      assignments: parsedResult.updatedAssignments || {},
+      reply: parsedResult.reply || "Assignments updated successfully.",
     };
   } catch (error) {
     console.error("Error processing chat command:", error);
-    throw new Error("AI could not process the chat command.");
+    return {
+      assignments: currentAssignments,
+      reply: "Sorry, I couldn't process that command. Please try rephrasing.",
+    };
   }
 };

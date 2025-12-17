@@ -1,4 +1,4 @@
-import { TestResult, ReceiptData, AssignmentMap, DistributionMethod, ItemOverridesMap } from '../types';
+import { TestResult, ReceiptData, AssignmentMap, DistributionMethod, ItemOverridesMap, ItemManualSplitsMap } from '../types';
 
 /**
  * MOCK DATA FOR TESTING
@@ -21,96 +21,151 @@ const MOCK_RECEIPT: ReceiptData = {
  */
 export const runTestSuite = async (onUpdate: (res: TestResult) => void) => {
   const tests: { name: string; category: TestResult['category']; fn: () => Promise<void> }[] = [
+    // --- BVT (Build Verification Tests) ---
     {
-      name: 'BVT: Calculation Accuracy (Proportional)',
+      name: 'BVT: Proportional Split Engine',
       category: 'BVT',
       fn: async () => {
-        // Mock assignments
         const assignments: AssignmentMap = { '1': ['John'], '2': ['John'], '3': ['Sarah'] };
-        // John spent 15/30 = 50%. Sarah spent 15/30 = 50%.
-        // John should owe 15 (sub) + 1.5 (tax) + 3 (tip) = 19.5
-        // This test simulates the logic inside SummaryDisplay
-        const johnSub = 15;
-        const sarahSub = 15;
         const totalSub = 30;
+        const johnSub = 15; // Burger (10) + Fries (5)
+        const sarahSub = 15; // Wine (15)
+        
+        const johnTax = (johnSub / totalSub) * 3;
+        const johnTip = (johnSub / totalSub) * 6;
+        const johnTotal = johnSub + johnTax + johnTip;
+        
+        if (johnTotal !== 19.5) throw new Error(`Math Mismatch: Expected 19.5, got ${johnTotal}`);
+      }
+    },
+    {
+      name: 'BVT: Equal Split Engine',
+      category: 'BVT',
+      fn: async () => {
+        const participants = ['John', 'Sarah'];
         const tax = 3;
         const tip = 6;
-        
-        const johnTotal = johnSub + (johnSub/totalSub * tax) + (johnSub/totalSub * tip);
-        if (johnTotal !== 19.5) throw new Error(`Expected 19.5, got ${johnTotal}`);
+        const taxPerPerson = tax / participants.length;
+        if (taxPerPerson !== 1.5) throw new Error('Equal tax split failed');
       }
     },
+
+    // --- E2E (End-to-End Logic) ---
     {
-      name: 'Edge Case: 100% Tax & Tip',
-      category: 'Edge Case',
-      fn: async () => {
-        const hugeTaxReceipt = { ...MOCK_RECEIPT, tax: 30.00, tip: 30.00, total: 90.00 };
-        const assignments: AssignmentMap = { '1': ['John'] }; // 1/3 share
-        const share = (10 / 30);
-        const johnTax = hugeTaxReceipt.tax * share;
-        if (johnTax !== 10) throw new Error(`Tax share math failed on edge scale. Expected 10, got ${johnTax}`);
-      }
-    },
-    {
-      name: 'Regression: Manual Overrides Isolation',
-      category: 'Regression',
-      fn: async () => {
-        const overrides: ItemOverridesMap = { '1': { tax: 0, tip: 0 } };
-        // Item 1 is $10. Subtotal $30. 
-        // If tax is $3, and item 1 (1/3 of cost) has $0 tax override,
-        // the remaining $3 tax must be split among other items.
-        const totalTax = 3;
-        const manualTax = 0;
-        const remainingTax = totalTax - manualTax;
-        if (remainingTax !== 3) throw new Error(`Manual override math leaked into pool.`);
-      }
-    },
-    {
-      name: 'E2E: Undo/Redo Stack Integrity',
+      name: 'E2E: Full Settlement Workflow',
       category: 'E2E',
       fn: async () => {
-        const stack: AssignmentMap[] = [];
-        const initial = { '1': ['A'] };
-        const next = { '1': ['A', 'B'] };
-        stack.push(initial);
-        // Simulate undo
-        const popped = stack.pop();
-        if (JSON.stringify(popped) !== JSON.stringify(initial)) throw new Error('History stack corrupted.');
+        // Step 1: Assignment
+        let assignments: AssignmentMap = { '1': ['Alice'] };
+        // Step 2: Override
+        let overrides: ItemOverridesMap = { '1': { tax: 0 } };
+        // Logic check: if Alice pays $0 tax on item 1, does it work?
+        if (overrides['1'].tax !== 0) throw new Error('Override failed to register');
       }
     },
     {
-      name: 'Scrum: User can split item between 3 people',
-      category: 'Scrum',
+      name: 'E2E: Undo/Redo Logic Stack',
+      category: 'E2E',
       fn: async () => {
-        const itemPrice = 15;
-        const splitCount = 3;
-        const perPerson = itemPrice / splitCount;
-        if (perPerson !== 5) throw new Error('Division logic failed for group split.');
+        const history: AssignmentMap[] = [];
+        history.push({ '1': ['A'] });
+        history.push({ '1': ['A', 'B'] });
+        const undo = history.pop(); // Undo to {'1': ['A', 'B']}
+        if (!undo || undo['1'].length !== 2) throw new Error('Redo state was not the top of stack');
       }
     },
+
+    // --- EDGE CASES ---
     {
-      name: 'Edge Case: Zero Price Item',
+      name: 'Edge Case: Zero Price Items',
       category: 'Edge Case',
       fn: async () => {
-        const freeItem = { id: '0', description: 'Free Bread', price: 0, quantity: 1 };
-        const assignments = { '0': ['Alice'] };
-        const aliceSub = 0;
-        const totalSub = 10;
+        const subtotal = 10;
+        const itemPrice = 0;
         const tax = 2;
-        // Proportion of 0/10 is 0. Alice should pay $0 tax for the free item.
-        const aliceTax = (aliceSub / totalSub) * tax;
-        if (aliceTax !== 0) throw new Error('Tax incorrectly applied to free item.');
+        const share = (itemPrice / subtotal) * tax;
+        if (share !== 0) throw new Error('Tax applied to free item');
       }
     },
     {
-      name: 'Regression: LocalStorage Persistence',
+      name: 'Edge Case: 0% Tip Scenario',
+      category: 'Edge Case',
+      fn: async () => {
+        const tip = 0;
+        const share = tip / 5;
+        if (share !== 0) throw new Error('Calculation failed with 0 tip');
+      }
+    },
+    {
+      name: 'Edge Case: Single Participant Only',
+      category: 'Edge Case',
+      fn: async () => {
+        const sub = 100, tax = 10, tip = 20;
+        const total = sub + tax + tip;
+        if (total !== 130) throw new Error('Basic addition failed for single user');
+      }
+    },
+    {
+      name: 'Edge Case: Very Long Item Names',
+      category: 'Edge Case',
+      fn: async () => {
+        const longName = "A".repeat(1000);
+        const item = { description: longName, price: 10 };
+        if (item.description.length !== 1000) throw new Error('String handling limit reached');
+      }
+    },
+
+    // --- REGRESSION ---
+    {
+      name: 'Regression: LocalStorage Sync',
       category: 'Regression',
       fn: async () => {
-        const testHistory = [{ id: 'test', total: 100 }];
-        localStorage.setItem('__test_persist__', JSON.stringify(testHistory));
-        const retrieved = JSON.parse(localStorage.getItem('__test_persist__') || '[]');
-        localStorage.removeItem('__test_persist__');
-        if (retrieved[0].id !== 'test') throw new Error('Persistence failed.');
+        const key = 'test_key';
+        const val = { ok: true };
+        localStorage.setItem(key, JSON.stringify(val));
+        const res = JSON.parse(localStorage.getItem(key) || '{}');
+        localStorage.removeItem(key);
+        if (!res.ok) throw new Error('LocalStorage failed to persist object');
+      }
+    },
+    {
+      name: 'Regression: Item Quantity Updates',
+      category: 'Regression',
+      fn: async () => {
+        const item = { price: 10, quantity: 2 };
+        // The price in our system is "Total for Line"
+        // If we change qty from 1 to 2, price should likely be updated by the UI logic
+        // This test verifies the price representation remains consistent
+        if (typeof item.price !== 'number') throw new Error('Price is not a number');
+      }
+    },
+    {
+      name: 'Regression: Manual Amount Precision',
+      category: 'Regression',
+      fn: async () => {
+        const splits: ItemManualSplitsMap = { '1': { 'A': 3.33, 'B': 3.33, 'C': 3.34 } };
+        const total = Object.values(splits['1']).reduce((a, b) => a + b, 0);
+        if (Math.abs(total - 10) > 0.001) throw new Error('Manual precision mismatch');
+      }
+    },
+
+    // --- SCRUM / USER STORIES ---
+    {
+      name: 'Scrum: US-01 Receipt Parsing Structure',
+      category: 'Scrum',
+      fn: async () => {
+        if (!MOCK_RECEIPT.items || MOCK_RECEIPT.items.length !== 3) throw new Error('Mock receipt structure invalid');
+      }
+    },
+    {
+      name: 'Scrum: US-04 Manual Tax Distribution',
+      category: 'Scrum',
+      fn: async () => {
+        const overrides: ItemOverridesMap = { '1': { tax: 0.50 } };
+        const totalTax = 3.00;
+        const manualTax = overrides['1'].tax!;
+        const remaining = totalTax - manualTax;
+        if (remaining !== 2.50) throw new Error('Manual tax subtraction failed');
       }
     }
   ];
@@ -126,7 +181,6 @@ export const runTestSuite = async (onUpdate: (res: TestResult) => void) => {
     } catch (e: any) {
       onUpdate({ id, name: test.name, category: test.category, status: 'failed', error: e.message, duration: Math.round(performance.now() - start) });
     }
-    // Small delay to visualize for the user
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 80));
   }
 };

@@ -4,11 +4,14 @@
 /**
  * CORE RECEIPT DATA
  */
+export type ItemCategory = "Food" | "Drink" | "Alcohol" | "Service" | "Tax" | "Other";
+
 export interface ReceiptItem {
   id: string;
   description: string;
   price: number;
   quantity: number;
+  category?: ItemCategory;
 }
 
 export interface ReceiptData {
@@ -18,6 +21,8 @@ export interface ReceiptData {
   tip: number;
   total: number;
   currency: string;
+  venue?: string;
+  date?: string;
 }
 
 /**
@@ -95,6 +100,15 @@ export interface CompleteHistoryState {
   itemManualSplits: ItemManualSplitsMap;
   receiptData: ReceiptData | null;
   timestamp: number;
+}
+
+/**
+ * RECURRING GROUPS
+ */
+export interface SavedGroup {
+  id: string;
+  name: string;
+  participants: string[];
 }
 
 /**

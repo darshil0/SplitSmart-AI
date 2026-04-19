@@ -86,7 +86,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200/50 overflow-hidden animate-in zoom-in-95 duration-500">
+    <div className="flex flex-col h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden animate-in zoom-in-95 duration-500 transition-colors">
       {/* AI Assistant Header */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
@@ -146,18 +146,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Messages Container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50/70 to-white/50 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
+        className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50/70 to-white/50 dark:from-slate-900/70 dark:to-slate-950/50 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent transition-colors"
       >
         {/* Empty State */}
         {messages.length === 0 && !isProcessing && (
           <div className="h-full flex flex-col items-center justify-center text-center py-12 px-8">
-            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-3xl flex items-center justify-center shadow-xl border-4 border-white/50">
-              <Bot size={28} className="text-indigo-500" />
+            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center shadow-xl border-4 border-white/50 dark:border-slate-800/50">
+              <Bot size={28} className="text-indigo-500 dark:text-indigo-400" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 mb-3">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
               No receipt yet?
             </h2>
-            <p className="text-slate-600 mb-8 max-w-sm leading-relaxed">
+            <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-sm leading-relaxed">
               Upload a receipt image on the left, then chat to split items!
             </p>
             <div className="space-y-2">
@@ -165,12 +165,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <button
                   key={i}
                   onClick={() => !disabled && onSendMessage(example)}
-                  className="w-full max-w-sm flex items-center gap-3 p-3 bg-white/60 hover:bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl text-sm font-medium text-slate-800 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50"
+                  className="w-full max-w-sm flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-200 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50"
                   disabled={disabled}
                 >
                   <Sparkles
                     size={14}
-                    className="text-indigo-500 flex-shrink-0"
+                    className="text-indigo-500 dark:text-indigo-400 flex-shrink-0"
                   />
                   "{example}"
                 </button>
@@ -202,7 +202,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 className={`max-w-[75%] p-5 rounded-3xl text-sm leading-relaxed shadow-xl backdrop-blur-sm ${
                   msg.role === "user"
                     ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-tl-2xl"
-                    : "bg-white/80 text-slate-900 border border-slate-100/50 rounded-tr-2xl"
+                    : "bg-white/80 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-100/50 dark:border-slate-700 rounded-tr-2xl"
                 }`}
               >
                 <p>{msg.content}</p>
@@ -222,13 +222,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {/* Processing State */}
         {isProcessing && (
           <div className="flex items-start gap-3 animate-in fade-in duration-500">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-slate-200 shadow-lg flex items-center justify-center flex-shrink-0">
-              <Sparkles size={16} className="text-slate-600 animate-pulse" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-lg flex items-center justify-center flex-shrink-0">
+              <Sparkles size={16} className="text-slate-600 dark:text-slate-400 animate-pulse" />
             </div>
-            <div className="bg-white/80 border border-slate-100/50 p-5 rounded-3xl rounded-tr-2xl shadow-xl backdrop-blur-sm max-w-[75%]">
+            <div className="bg-white/80 dark:bg-slate-800 border border-slate-100/50 dark:border-slate-700 p-5 rounded-3xl rounded-tr-2xl shadow-xl backdrop-blur-sm max-w-[75%]">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-indigo-200 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-indigo-200 dark:bg-indigo-900 rounded-full animate-bounce"></div>
                   <div
                     className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
                     style={{ animationDelay: "150ms" }}
@@ -261,7 +261,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Input Form */}
       <form
         onSubmit={handleSubmit}
-        className="p-6 bg-gradient-to-t from-white/50 to-transparent border-t border-slate-100/50"
+        className="p-6 bg-gradient-to-t from-white/50 to-transparent dark:from-slate-900/50 dark:to-transparent border-t border-slate-100/50 dark:border-slate-800/50 transition-colors"
       >
         <div className="relative group">
           <input
@@ -281,9 +281,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             disabled={disabled || isProcessing}
             className={`w-full pl-5 pr-14 py-4 text-sm font-semibold transition-all duration-200 ${
               isInputFocused
-                ? "bg-white border-2 border-indigo-500 shadow-xl shadow-indigo-200 ring-4 ring-indigo-50/50"
-                : "bg-white/70 border border-slate-200 hover:border-slate-300 hover:shadow-lg"
-            } rounded-3xl focus:outline-none focus:placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed`}
+                ? "bg-white dark:bg-slate-800 border-2 border-indigo-500 shadow-xl shadow-indigo-200 dark:shadow-indigo-900 ring-4 ring-indigo-50/50 dark:ring-indigo-900/20"
+                : "bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-lg"
+            } rounded-3xl focus:outline-none focus:placeholder-slate-400 dark:text-white dark:placeholder-slate-500 disabled:opacity-50 disabled:cursor-not-allowed`}
             autoComplete="off"
           />
           <button

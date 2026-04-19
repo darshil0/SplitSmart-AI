@@ -30,8 +30,12 @@ const receiptSchema: any = {
           description: { type: SchemaType.STRING },
           price: { type: SchemaType.NUMBER },
           quantity: { type: SchemaType.NUMBER },
+          category: { 
+            type: SchemaType.STRING,
+            enum: ["Food", "Drink", "Alcohol", "Service", "Tax", "Other"]
+          },
         },
-        required: ["id", "description", "price", "quantity"],
+        required: ["id", "description", "price", "quantity", "category"],
       },
     },
     currency: { type: SchemaType.STRING },
@@ -39,6 +43,8 @@ const receiptSchema: any = {
     tax: { type: SchemaType.NUMBER },
     tip: { type: SchemaType.NUMBER },
     total: { type: SchemaType.NUMBER },
+    venue: { type: SchemaType.STRING },
+    date: { type: SchemaType.STRING },
   },
   required: ["items", "currency", "subtotal", "tax", "tip", "total"],
 };
@@ -53,18 +59,21 @@ export const parseReceiptImage = async (
       ...generationConfig,
       responseSchema: receiptSchema,
     },
-    systemInstruction: `You are a world-class receipt parsing agent. Extract structured data from this receipt with maximum accuracy.
+    systemInstruction: `You are an elite receipt parsing engine specialized in complex, handwritten, and multi-column receipts. 
 
-CONTEXT & EDGE CASES:
-- Items might have descriptions spanning multiple lines. Prices usually align right.
-- Discounts/Coupons: Include as items with negative prices.
-- Service charges: Add to 'tip' or as separate line item.
-- Multiple taxes: Sum into single 'tax' field.
-- Ignore store addresses, phone numbers, marketing text.
-- Handwritten notes: Prioritize final adjustments.
-- Quantity: Assume 1 if not specified.
+EXTRACTION RULES:
+1. LAYOUT: Handles multi-column layouts where prices might be far from descriptions.
+2. HANDWRITING: Identify handwritten notes (e.g., tip added at bottom, item swaps).
+3. CATEGORIZATION: Assign each item to [Food, Drink, Alcohol, Service, Tax, Other].
+4. VENUE & DATE: Extract the venue name and date if visible.
+5. DISCOUNTS: Include as negative items.
+6. SERVICE CHARGES: Categorize as 'Service' and add to tip or items.
 
-Ensure: sum(items[].price) ≈ subtotal, total = subtotal + tax + tip`,
+CONSISTENCY CHECK:
+- sum(items[].price) + tax + tip MUST equal total.
+- If quantity > 1, the 'price' should be the TOTAL for that line item.
+
+Output ONLY valid JSON.`,
   });
 
   // Clean base64 data URL prefix and detect mime type

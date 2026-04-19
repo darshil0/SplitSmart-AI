@@ -1,11 +1,17 @@
-# SplitSmart AI (v1.2.0) 🚀
+# SplitSmart AI (v1.3.0) 🚀
 
 A modern, split-screen bill splitting application powered by Google's Gemini 1.5 Pro model. Upload a receipt image and use natural language to assign items to friends.
 
 ## ✨ Features
 
-- **AI Receipt Parsing**: Converts receipt images → structured JSON (items, prices, tax, tip)
+- **AI Receipt Parsing**: Converts receipt images → structured JSON (items, prices, tax, tip, venue, date)
+- **Item Categorization**: Auto-categorizes items (Food, Drink, etc.) with visual icons
+- **Dark Mode Support**: Seamless transition for low-light restaurant use
 - **Natural Language Chat**: `"Tom had the burger"`, `"Split pizza between Sarah and I"`
+- **Direct Payment Integration**: Instant Venmo, PayPal, and Cash App links
+- **Collaborative Splitting**: Share split sessions via encoded URLs
+- **Export Options**: Download settlement summaries as CSV or PDF
+- **History Search**: Robust filtering of past splits by date, person, or venue
 - **Smart Pronoun Resolution**: Enter name → AI understands "I/me/my"
 - **Real-time Visualizations**: Pie charts + detailed per-person breakdowns
 - **Flexible Tax/Tip Splitting**:
@@ -15,22 +21,23 @@ A modern, split-screen bill splitting application powered by Google's Gemini 1.5
   | **EQUAL** | Divided evenly among participants |
   | **MANUAL** | Custom tax/tip per item |
 
-## 🚀 What's New in v1.2.0
+## 🚀 What's New in v1.3.0
 
 ### ✨ New Features
 
-- **Robust Undo/Redo**: Full history tracking with unlimited steps
-- **Production State Management**: Single source of truth, no data loss
-- **Enhanced Mobile UX**: Perfect responsive tabs + touch gestures
-- **Auto-Save & Restore**: Latest split loads on refresh
-- **Performance**: `useCallback`, `useMemo`, `useRef` everywhere
+- **Direct Payment Integration**: Settle debts instantly via Venmo, PayPal, or Cash App.
+- **Dark Mode**: A beautiful, premium dark theme for restaurant use.
+- **State Sharing**: Generate a unique link for friends to join/view the session.
+- **Export & PDF**: Download summaries as CSV or generate clean PDF printouts.
+- **Item Categorization**: AI now flags items as Food, Drink, Alcohol, etc.
+- **History Search**: Find past splits instantly by searching names or venues.
+- **Advanced OCR**: Better handling of handwritten notes and complex receipts.
 
-### 🔧 Key Fixes
+### 🔧 Key Enhancements
 
-- **Fixed History System**: Single `history[]` array + `historyIndexRef`
-- **Patched Gemini API**: Proper `generateContent([imagePart])` + `responseSchema`
-- **UI Polish**: Smooth loading states, mobile tabs, gradient branding
-- **TS & Stability**: Resolved all environment-level TypeScript errors and stabilized the test suite.
+- **UI Polish**: Added glassmorphism, category icons, and venue details.
+- **UX Improvements**: Improved mobile responsiveness and state persistence.
+- **Gemini 1.5 Pro**: Optimized prompts for faster and more accurate extraction.
 
 ## 🛠️ Tech Stack
 

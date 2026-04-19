@@ -14,6 +14,7 @@ import {
   ReceiptItem,
   HistoryEntry,
   ItemManualSplitsMap,
+  SavedGroup,
 } from "./types";
 import {
   parseReceiptImage,
@@ -36,6 +37,14 @@ import {
   History as HistoryIcon,
   Beaker,
   X,
+  Moon,
+  Sun,
+  Users,
+  Save,
+  Trash2,
+  Search,
+  Download,
+  Share2,
 } from "lucide-react";
 
 const App: React.FC = () => {
@@ -77,6 +86,24 @@ const App: React.FC = () => {
   >("receipt");
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [showTestLab, setShowTestLab] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("splitSmartTheme");
+      return saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
+    return false;
+  });
+  const [baseCurrency, setBaseCurrency] = useState("USD");
+  const [savedGroups, setSavedGroups] = useState<SavedGroup[]>(() => {
+    try {
+      const saved = localStorage.getItem("splitSmartGroups");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showGroupsModal, setShowGroupsModal] = useState(false);
+  const [extraParticipants, setExtraParticipants] = useState<string[]>([]);
 
   // Undo/Redo state
   const historyRef = useRef(history);
@@ -108,14 +135,21 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Save history to localStorage
+  // Theme Effect
   useEffect(() => {
-    try {
-      localStorage.setItem("splitSmartHistory", JSON.stringify(history));
-    } catch (error) {
-      console.error("Failed to save history:", error);
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("splitSmartTheme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("splitSmartTheme", "light");
     }
-  }, [history]);
+  }, [isDarkMode]);
+
+  // Save groups to localStorage
+  useEffect(() => {
+    localStorage.setItem("splitSmartGroups", JSON.stringify(savedGroups));
+  }, [savedGroups]);
 
   // Initial welcome message
   useEffect(() => {
@@ -136,16 +170,40 @@ const App: React.FC = () => {
       setShowWalkthrough(true);
       localStorage.setItem("splitSmartWalkthrough", "true");
     }
+
+    // Handle shared state from URL
+    const params = new URLSearchParams(window.location.search);
+    const sharedState = params.get("s");
+    if (sharedState) {
+      try {
+        const decoded = JSON.parse(atob(sharedState));
+        setReceiptData(decoded.receiptData);
+        setAssignments(decoded.assignments);
+        setItemManualSplits(decoded.itemManualSplits);
+        setDistributionMethod(decoded.distributionMethod || "PROPORTIONAL");
+        // Clear the URL param without refreshing
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: "system",
+          content: "Successfully loaded shared split session!",
+          timestamp: Date.now()
+        }]);
+      } catch (e) {
+        console.error("Failed to decode shared state", e);
+      }
+    }
   }, [messages.length]);
 
   const allParticipants = useMemo(() => {
-    const people = new Set<string>();
-    if (userName && isNameSet) people.add(userName);
+    const set = new Set<string>();
+    if (userName && isNameSet) set.add(userName);
+    extraParticipants.forEach(p => set.add(p));
     Object.values(assignments).forEach((names) => {
-      names?.forEach((name) => people.add(name));
+      names.forEach((n) => set.add(n));
     });
-    return Array.from(people).sort();
-  }, [assignments, userName, isNameSet]);
+    return Array.from(set);
+  }, [assignments, userName, isNameSet, extraParticipants]);
 
   const canUndo = useMemo(() => historyIndexRef.current > 0, []);
   const canRedo = useMemo(
@@ -158,7 +216,7 @@ const App: React.FC = () => {
       setHistory((prev) => {
         // Truncate future history
         const newHistory = prev.slice(0, historyIndexRef.current + 1);
-        return [
+        const updated = [
           ...newHistory,
           {
             assignments: newAssignments,
@@ -167,8 +225,9 @@ const App: React.FC = () => {
             timestamp: Date.now(),
           },
         ];
+        historyIndexRef.current = updated.length - 1;
+        return updated;
       });
-      historyIndexRef.current = history.length;
       setIsCurrentSplitSaved(false);
     },
     [receiptData],
@@ -211,6 +270,22 @@ const App: React.FC = () => {
       return newHistory;
     });
   }, []);
+
+  const handleShareSession = useCallback(() => {
+    if (!receiptData) return;
+    const state = {
+      receiptData,
+      assignments,
+      itemManualSplits,
+      distributionMethod
+    };
+    const encoded = btoa(JSON.stringify(state));
+    const url = `${window.location.origin}${window.location.pathname}?s=${encoded}`;
+    
+    navigator.clipboard.writeText(url).then(() => {
+      alert("Shareable link copied to clipboard! Anyone with this link can view and edit this split.");
+    });
+  }, [receiptData, assignments, itemManualSplits, distributionMethod]);
 
   const handleClearHistory = useCallback(() => {
     if (
@@ -423,7 +498,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-indigo-50 overflow-hidden font-inter">
+    <div className={`h-screen flex flex-col ${isDarkMode ? "dark bg-slate-950" : "bg-gradient-to-br from-slate-50 to-indigo-50"} overflow-hidden font-inter transition-colors duration-500`}>
       {showWalkthrough && (
         <WalkthroughModal onClose={() => setShowWalkthrough(false)} />
       )}
@@ -448,17 +523,17 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/50 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+      <header className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm transition-colors">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-3 rounded-2xl text-white shadow-xl">
               <Split size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight">
+              <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent tracking-tight">
                 SplitSmart
               </h1>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 AI Bill Splitter
               </p>
             </div>
@@ -466,10 +541,10 @@ const App: React.FC = () => {
 
           <div className="flex flex-col items-start">
             <div
-              className={`flex items-center bg-slate-100/80 px-4 py-2 rounded-2xl border-2 transition-all duration-300 group ${
+              className={`flex items-center bg-slate-100/80 dark:bg-slate-800/80 px-4 py-2 rounded-2xl border-2 transition-all duration-300 group ${
                 userNameError
                   ? "border-rose-400 bg-rose-50/80 shadow-rose-100"
-                  : "border-slate-200 hover:border-slate-300 focus-within:border-indigo-400 focus-within:bg-white shadow-lg shadow-indigo-100/50"
+                  : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 focus-within:bg-white dark:focus-within:bg-slate-900 shadow-lg shadow-indigo-100/50 dark:shadow-none"
               }`}
             >
               <User
@@ -477,7 +552,7 @@ const App: React.FC = () => {
                 className={`mr-3 transition-colors ${
                   userNameError
                     ? "text-rose-500"
-                    : "text-slate-500 group-focus-within:text-indigo-600"
+                    : "text-slate-500 dark:text-slate-400 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400"
                 }`}
               />
               <input
@@ -494,12 +569,12 @@ const App: React.FC = () => {
                     e.currentTarget.blur();
                   }
                 }}
-                className="bg-transparent border-none outline-none text-sm font-semibold text-slate-900 placeholder-slate-500 w-28 sm:w-36"
+                className="bg-transparent border-none outline-none text-sm font-semibold text-slate-900 dark:text-white placeholder-slate-500 w-28 sm:w-36"
                 autoComplete="off"
               />
             </div>
             {isNameSet && (
-              <span className="text-xs text-slate-500 mt-1 font-medium">
+              <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
                 Ready to split! 👋
               </span>
             )}
@@ -508,11 +583,39 @@ const App: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="p-3 rounded-2xl transition-all shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700"
+            title="Toggle Dark Mode"
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
+          <button
+            onClick={() => setShowGroupsModal(true)}
+            className="p-3 rounded-2xl transition-all shadow-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700"
+            title="Saved Groups"
+          >
+            <Users size={20} />
+          </button>
+          <button
+            onClick={handleShareSession}
+            disabled={!receiptData}
+            className={`p-3 rounded-2xl transition-all shadow-sm ${
+              !receiptData
+                ? "text-slate-300 dark:text-slate-700 cursor-not-allowed"
+                : "text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700"
+            }`}
+            title="Share Session"
+          >
+            <Share2 size={20} />
+          </button>
+
+          <button
             onClick={() => setShowTestLab(true)}
             className={`p-3 rounded-2xl transition-all shadow-sm ${
               showTestLab
                 ? "bg-indigo-600 text-white shadow-indigo-300 hover:shadow-indigo-400"
-                : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 bg-white/50"
+                : "text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700"
             }`}
             title="Test Lab (Ctrl+T)"
           >
@@ -520,7 +623,7 @@ const App: React.FC = () => {
           </button>
           <button
             onClick={() => setShowWalkthrough(true)}
-            className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 bg-white/50 rounded-2xl transition-all shadow-sm"
+            className="p-3 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 bg-white/50 dark:bg-slate-900/50 rounded-2xl transition-all shadow-sm border border-slate-200 dark:border-slate-700"
             title="Help & Walkthrough"
           >
             <HelpCircle size={20} />
@@ -684,6 +787,96 @@ const App: React.FC = () => {
               <p className="text-slate-600 mt-2">
                 AI is extracting items and prices...
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showGroupsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-all animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <Users size={20} />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Saved Groups</h2>
+              </div>
+              <button
+                onClick={() => setShowGroupsModal(false)}
+                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-all text-slate-500"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 flex-1 overflow-auto max-h-[60vh] space-y-4">
+              {allParticipants.length > 0 && (
+                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800">
+                  <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-3">Save Current Group</p>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="Group Name (e.g. Friday Lunch)"
+                      className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const name = e.currentTarget.value;
+                          if (name) {
+                            setSavedGroups([...savedGroups, { id: Date.now().toString(), name, participants: allParticipants }]);
+                            e.currentTarget.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <button 
+                      onClick={(e) => {
+                        const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                        if (input.value) {
+                          setSavedGroups([...savedGroups, { id: Date.now().toString(), name: input.value, participants: allParticipants }]);
+                          input.value = '';
+                        }
+                      }}
+                      className="bg-indigo-600 text-white p-2 rounded-xl"
+                    >
+                      <Save size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Available Groups</p>
+                {savedGroups.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400 italic">No groups saved yet.</p>
+                ) : (
+                  savedGroups.map(group => (
+                    <div key={group.id} className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group">
+                      <div>
+                        <h4 className="font-bold text-slate-900 dark:text-white">{group.name}</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{group.participants.join(", ")}</p>
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => {
+                            setExtraParticipants(prev => [...new Set([...prev, ...group.participants])]);
+                            alert(`Group "${group.name}" participants added!`);
+                            setShowGroupsModal(false);
+                          }}
+                          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                          <Plus size={14} />
+                        </button>
+                        <button 
+                          onClick={() => setSavedGroups(savedGroups.filter(g => g.id !== group.id))}
+                          className="p-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-lg"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -8,15 +8,16 @@ import {
   ItemManualSplitsMap,
 } from "../types";
 import {
-  User,
-  Settings2,
-  Edit3,
-  Check,
-  Plus,
-  Minus,
-  Users,
   AlertCircle,
   Calculator,
+  Utensils,
+  Coffee,
+  Wine,
+  Tag,
+  Receipt as ReceiptIcon,
+  Calendar as CalendarIcon,
+  MapPin,
+  Sparkles,
 } from "lucide-react";
 
 interface ReceiptDisplayProps {
@@ -259,27 +260,50 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
     }
   };
 
+  const getCategoryIcon = (category?: string) => {
+    switch (category) {
+      case "Food": return <Utensils size={14} />;
+      case "Drink": return <Coffee size={14} />;
+      case "Alcohol": return <Wine size={14} />;
+      case "Service": return <Sparkles size={14} />;
+      case "Tax": return <Tag size={14} />;
+      default: return <ReceiptIcon size={14} />;
+    }
+  };
+
   if (isLoading || !data) return null;
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in duration-500">
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div className="flex justify-between items-center mb-6">
+    <div className="flex flex-col gap-4 animate-in fade-in duration-500 transition-colors">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
               Receipt Details
             </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+            {data.venue && (
+              <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-bold text-sm mt-1">
+                <MapPin size={14} />
+                {data.venue}
+              </div>
+            )}
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
                 Verified AI Scan
               </span>
+              {data.date && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  <CalendarIcon size={12} />
+                  {data.date}
+                </span>
+              )}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               Total Bill
             </div>
-            <div className="text-2xl font-black text-slate-900">
+            <div className="text-2xl font-black text-slate-900 dark:text-white">
               {data.currency}
               {data.total.toFixed(2)}
             </div>
@@ -303,10 +327,10 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
             return (
               <div
                 key={item.id}
-                className={`relative bg-slate-50/50 p-4 rounded-2xl border transition-all duration-300 ${
+                className={`relative bg-slate-50/50 dark:bg-slate-800/50 p-4 rounded-2xl border transition-all duration-300 ${
                   isEditing || isSplitting
-                    ? "border-indigo-400 bg-white shadow-lg ring-4 ring-indigo-50 z-10 scale-[1.02]"
-                    : "border-slate-100 hover:border-slate-300 hover:bg-slate-50"
+                    ? "border-indigo-400 dark:border-indigo-500 bg-white dark:bg-slate-850 shadow-lg ring-4 ring-indigo-50 dark:ring-indigo-900/20 z-10 scale-[1.02]"
+                    : "border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
                 } ${hasErrors ? "border-rose-400 ring-rose-50" : ""}`}
               >
                 <div className="flex justify-between items-start">
@@ -395,11 +419,14 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-800 truncate">
+                        <span className="text-slate-400 dark:text-slate-500">
+                          {getCategoryIcon(item.category)}
+                        </span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate">
                           {item.description}
                         </span>
                         {item.quantity > 1 && (
-                          <span className="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                          <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full font-bold">
                             x{item.quantity}
                           </span>
                         )}
@@ -409,12 +436,12 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
 
                   {!isEditing && (
                     <div className="text-right">
-                      <div className="text-slate-900 font-mono font-bold bg-white px-2 py-1 rounded-lg border border-slate-100">
+                      <div className="text-slate-900 dark:text-white font-mono font-bold bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-700">
                         {data.currency}
                         {item.price.toFixed(2)}
                       </div>
                       {item.quantity > 1 && (
-                        <div className="text-[9px] text-slate-400 font-medium mt-1">
+                        <div className="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-1">
                           {data.currency}
                           {(item.price / item.quantity).toFixed(2)} ea
                         </div>
@@ -423,7 +450,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                   )}
                 </div>
 
-                <div className="flex justify-between items-center mt-4 pt-2 border-t border-slate-100/50">
+                <div className="flex justify-between items-center mt-4 pt-2 border-t border-slate-100/50 dark:border-slate-800/50">
                   <div className="flex flex-wrap gap-1.5 flex-1 mr-2">
                     {assignedTo.length > 0 ? (
                       assignedTo.map((person) => (
@@ -431,8 +458,8 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           key={person}
                           className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-bold border transition-all ${
                             manualSplits
-                              ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : "bg-indigo-50 text-indigo-700 border-indigo-100"
+                              ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+                              : "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800"
                           }`}
                         >
                           <User size={10} />
@@ -446,7 +473,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                         </div>
                       ))
                     ) : (
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter flex items-center gap-1">
                         <Users size={12} /> Needs Assignment
                       </span>
                     )}
@@ -457,13 +484,13 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                       <>
                         <button
                           onClick={() => saveEditing(item.id)}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${hasErrors ? "bg-slate-100 text-slate-300 cursor-not-allowed" : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"}`}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${hasErrors ? "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed" : "bg-emerald-600 dark:bg-emerald-500 text-white hover:bg-emerald-700 shadow-emerald-100"}`}
                         >
                           <Check size={14} /> Save
                         </button>
                         <button
                           onClick={cancelEditing}
-                          className="px-3 py-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 text-xs font-bold transition-all"
+                          className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-all"
                         >
                           Cancel
                         </button>
@@ -472,14 +499,14 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                       <>
                         <button
                           onClick={() => toggleSplitting(item.id)}
-                          className={`p-2 rounded-xl transition-all ${isSplitting ? "bg-indigo-600 text-white shadow-lg" : "bg-white text-slate-400 hover:text-indigo-600 border border-slate-100 shadow-sm"}`}
+                          className={`p-2 rounded-xl transition-all ${isSplitting ? "bg-indigo-600 text-white shadow-lg" : "bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-100 dark:border-slate-700 shadow-sm"}`}
                           title="Split between people"
                         >
                           <Users size={16} />
                         </button>
                         <button
                           onClick={() => startEditing(item)}
-                          className="p-2 bg-white text-slate-400 hover:text-amber-600 border border-slate-100 shadow-sm rounded-xl transition-all"
+                          className="p-2 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 border border-slate-100 dark:border-slate-700 shadow-sm rounded-xl transition-all"
                           title="Edit item details"
                         >
                           <Edit3 size={16} />
@@ -518,7 +545,7 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           className={`text-xs px-3 py-2 rounded-xl font-bold transition-all border flex items-center gap-1.5 ${
                             assignedTo.includes(name)
                               ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-indigo-400"
+                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-400"
                           }`}
                         >
                           {assignedTo.includes(name) ? (
@@ -687,30 +714,30 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
           })}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-slate-100">
+        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 transition-colors">
           <div className="grid grid-cols-2 gap-x-12 gap-y-2 mb-6 text-sm">
-            <div className="flex justify-between text-slate-500 font-medium">
+            <div className="flex justify-between text-slate-500 dark:text-slate-400 font-medium">
               <span>Subtotal</span>
               <span>
                 {data.currency}
                 {data.subtotal.toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between text-slate-500 font-medium">
+            <div className="flex justify-between text-slate-500 dark:text-slate-400 font-medium">
               <span>Tax</span>
               <span>
                 {data.currency}
                 {data.tax.toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between text-slate-500 font-medium">
+            <div className="flex justify-between text-slate-500 dark:text-slate-400 font-medium">
               <span>Tip</span>
               <span>
                 {data.currency}
                 {data.tip.toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between text-xl font-black text-slate-900 pt-2 border-t border-slate-100 col-span-2">
+            <div className="flex justify-between text-xl font-black text-slate-900 dark:text-white pt-2 border-t border-slate-100 dark:border-slate-800 col-span-2">
               <span>Grand Total</span>
               <span>
                 {data.currency}
@@ -719,11 +746,11 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
               <Settings2 size={12} /> Distribution Strategy
             </div>
-            <div className="flex p-1 bg-slate-200 rounded-xl">
+            <div className="flex p-1 bg-slate-200 dark:bg-slate-700 rounded-xl">
               {(
                 ["PROPORTIONAL", "EQUAL", "MANUAL"] as DistributionMethod[]
               ).map((method) => (
@@ -732,8 +759,8 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                   onClick={() => onDistributionChange(method)}
                   className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
                     distributionMethod === method
-                      ? "bg-white text-indigo-600 shadow-md scale-[1.02]"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-white dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 shadow-md scale-[1.02]"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                 >
                   {method.charAt(0) +

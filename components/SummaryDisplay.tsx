@@ -81,7 +81,6 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     let subtotalOfItemsWithNoTaxOverride = 0;
     let subtotalOfItemsWithNoTipOverride = 0;
 
-    // First pass: Track subtotal and assigned items
     receiptData.items.forEach((item) => {
       const override = itemOverrides[item.id];
       if (distributionMethod === "MANUAL") {
@@ -96,7 +95,6 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     const remainingTaxPool = Math.max(0, receiptData.tax - totalManualTax);
     const remainingTipPool = Math.max(0, receiptData.tip - totalManualTip);
 
-    // Second pass: Calculate shares for each person
     receiptData.items.forEach((item) => {
       const assignedPeople = assignments[item.id] || [];
       const manualSplits = itemManualSplits[item.id];
@@ -157,7 +155,6 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
       }
     });
 
-    // Handle unassigned items
     const assignedItemIds = new Set(
       Object.keys(assignments).filter((k) => assignments[k].length > 0),
     );
@@ -196,13 +193,16 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     }
 
     const peopleList = Object.values(peopleMap);
-    const totalAssignedSubtotal = receiptData.subtotal || 1;
+    // FIX: guard against division-by-zero when subtotal is 0
+    const totalAssignedSubtotal =
+      receiptData.subtotal > 0 ? receiptData.subtotal : 1;
     const realPeopleCount = peopleList.filter(
       (p) => p.name !== "Unassigned",
     ).length;
 
     peopleList.forEach((person) => {
       if (distributionMethod === "PROPORTIONAL") {
+        // FIX: use person.subtotal / totalAssignedSubtotal safely (denominator > 0)
         const shareRatio = person.subtotal / totalAssignedSubtotal;
         person.taxShare = receiptData.tax * shareRatio;
         person.tipShare = receiptData.tip * shareRatio;
@@ -254,7 +254,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   const handleExportCSV = () => {
     if (!receiptData) return;
     let csv = "Name,Subtotal,Tax Share,Tip Share,Total Owed\n";
-    summary.forEach(p => {
+    summary.forEach((p) => {
       csv += `${p.name},${p.subtotal.toFixed(2)},${p.taxShare.toFixed(2)},${p.tipShare.toFixed(2)},${p.totalOwed.toFixed(2)}\n`;
     });
     const blob = new Blob([csv], { type: "text/csv" });
@@ -263,22 +263,32 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     a.href = url;
     a.download = `split-summary-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
+    // Clean up the object URL to avoid memory leaks
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handleExportPDF = () => {
     window.print();
   };
 
-  const getPaymentLink = (person: string, amount: number, method: 'venmo' | 'paypal' | 'cashapp') => {
-    const cleanName = person.replace(/\s+/g, '').toLowerCase();
+  const getPaymentLink = (
+    person: string,
+    amount: number,
+    method: "venmo" | "paypal" | "cashapp",
+  ) => {
+    const cleanName = person.replace(/\s+/g, "").toLowerCase();
     const formattedAmount = amount.toFixed(2);
-    const note = encodeURIComponent(`SplitSmart - Bill Split`);
-    
+    const note = encodeURIComponent("SplitSmart - Bill Split");
+
     switch (method) {
-      case 'venmo': return `venmo://paycharge?txn=pay&recipients=${cleanName}&amount=${formattedAmount}&note=${note}`;
-      case 'paypal': return `https://paypal.me/${cleanName}/${formattedAmount}`;
-      case 'cashapp': return `https://cash.app/$${cleanName}/${formattedAmount}`;
-      default: return '';
+      case "venmo":
+        return `venmo://paycharge?txn=pay&recipients=${cleanName}&amount=${formattedAmount}&note=${note}`;
+      case "paypal":
+        return `https://paypal.me/${cleanName}/${formattedAmount}`;
+      case "cashapp":
+        return `https://cash.app/$${cleanName}/${formattedAmount}`;
+      default:
+        return "";
     }
   };
 
@@ -307,13 +317,16 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   const chartData = summary.map((p, index) => ({
     name: p.name,
     value: p.totalOwed,
-    color: p.name === "Unassigned" ? "#cbd5e1" : COLORS[index % COLORS.length],
+    color:
+      p.name === "Unassigned" ? "#cbd5e1" : COLORS[index % COLORS.length],
   }));
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 h-full flex flex-col animate-in fade-in duration-700 transition-colors">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">Settlement Summary</h3>
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+          Settlement Summary
+        </h3>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
             <button
@@ -465,7 +478,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
               </div>
               <div className="bg-indigo-50/30 dark:bg-indigo-900/20 px-3 py-2 rounded-xl">
                 <div className="text-[8px] font-bold text-slate-400 uppercase">
-                  Tax & Tip
+                  Tax &amp; Tip
                 </div>
                 <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
                   {receiptData.currency}
@@ -480,21 +493,40 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
                   Settle via:
                 </div>
                 <button
-                  onClick={() => window.open(getPaymentLink(person.name, person.totalOwed, 'venmo'), '_blank')}
+                  onClick={() =>
+                    window.open(
+                      getPaymentLink(person.name, person.totalOwed, "venmo"),
+                      "_blank",
+                    )
+                  }
                   className="p-1.5 bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 rounded-lg hover:bg-sky-100 transition-colors"
                   title="Venmo"
                 >
                   <Smartphone size={14} />
                 </button>
                 <button
-                  onClick={() => window.open(getPaymentLink(person.name, person.totalOwed, 'paypal'), '_blank')}
+                  onClick={() =>
+                    window.open(
+                      getPaymentLink(person.name, person.totalOwed, "paypal"),
+                      "_blank",
+                    )
+                  }
                   className="p-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 transition-colors"
                   title="PayPal"
                 >
                   <ExternalLink size={14} />
                 </button>
                 <button
-                  onClick={() => window.open(getPaymentLink(person.name, person.totalOwed, 'cashapp'), '_blank')}
+                  onClick={() =>
+                    window.open(
+                      getPaymentLink(
+                        person.name,
+                        person.totalOwed,
+                        "cashapp",
+                      ),
+                      "_blank",
+                    )
+                  }
                   className="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-colors"
                   title="Cash App"
                 >

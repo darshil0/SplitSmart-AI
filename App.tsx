@@ -42,9 +42,8 @@ import {
   Users,
   Save,
   Trash2,
-  Search,
-  Download,
   Share2,
+  Plus,
 } from "lucide-react";
 
 const App: React.FC = () => {
@@ -93,7 +92,6 @@ const App: React.FC = () => {
     }
     return false;
   });
-  const [baseCurrency, setBaseCurrency] = useState("USD");
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>(() => {
     try {
       const saved = localStorage.getItem("splitSmartGroups");

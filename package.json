@@ -1,7 +1,7 @@
 {
   "name": "splitsmart-ai",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "type": "module",
   "description": "AI-powered bill splitting app with Gemini 1.5 Pro. Upload receipt → chat assignments → instant summaries.",
   "author": "Darshil",

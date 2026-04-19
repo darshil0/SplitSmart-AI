@@ -32,6 +32,7 @@ A modern, split-screen bill splitting application powered by Google's Gemini 1.5
 - **Item Categorization**: AI now flags items as Food, Drink, Alcohol, etc.
 - **History Search**: Find past splits instantly by searching names or venues.
 - **Advanced OCR**: Better handling of handwritten notes and complex receipts.
+- **Codebase Integrity**: Optimized for production with 0 TypeScript errors and clean imports.
 
 ### 🔧 Key Enhancements
 

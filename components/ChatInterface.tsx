@@ -28,32 +28,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [inputValue, setInputValue] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Optimized scroll to bottom
+  // FIX: keep a stable ref to inputValue so the keyboard-shortcut effect
+  //      never captures a stale closure while still reading the current value.
+  const inputValueRef = useRef(inputValue);
+  useEffect(() => {
+    inputValueRef.current = inputValue;
+  }, [inputValue]);
+
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, []);
 
-  // Auto-scroll on messages or processing change
   useEffect(() => {
     scrollToBottom();
   }, [messages.length, isProcessing, scrollToBottom]);
 
-  // Keyboard shortcuts
+  // FIX: focus the input only on initial mount, not on every render.
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []); // empty deps → runs once
+
+  // Keyboard shortcuts — use refs so the handler is always fresh
+  const handleSubmitRef = useRef<() => void>(() => {});
+  handleSubmitRef.current = () => {
+    const trimmed = inputValueRef.current.trim();
+    if (trimmed && !isProcessing && !disabled) {
+      onSendMessage(trimmed);
+      setInputValue("");
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (disabled || isProcessing) return;
-
-      // Ctrl/Cmd + Enter to send
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        handleSubmit();
+        handleSubmitRef.current();
       }
-      // Escape to clear input
       if (e.key === "Escape") {
         setInputValue("");
       }
@@ -61,15 +74,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isProcessing, disabled]);
+    // FIX: only re-register when disabled/isProcessing change, not on every render
+  }, [disabled, isProcessing]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    const trimmed = inputValue.trim();
-    if (trimmed && !isProcessing && !disabled) {
-      onSendMessage(trimmed);
-      setInputValue("");
-    }
+    handleSubmitRef.current();
   };
 
   const handleStop = () => {
@@ -77,7 +87,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setInputValue("");
   };
 
-  // Message examples for empty state
   const exampleCommands = [
     "John had the burger",
     "Sarah and I shared the pizza",
@@ -87,7 +96,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden animate-in zoom-in-95 duration-500 transition-colors">
-      {/* AI Assistant Header */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-2xl shadow-lg shadow-indigo-500/25">
@@ -109,7 +118,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Undo / Redo controls */}
         <div className="flex items-center gap-1.5 bg-slate-800/50 p-1.5 rounded-2xl border border-slate-700/50 backdrop-blur-sm">
           <button
             onClick={onUndo}
@@ -143,12 +152,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Messages Container */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50/70 to-white/50 dark:from-slate-900/70 dark:to-slate-950/50 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent transition-colors"
-      >
-        {/* Empty State */}
+      {/* Messages */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50/70 to-white/50 dark:from-slate-900/70 dark:to-slate-950/50 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent transition-colors">
         {messages.length === 0 && !isProcessing && (
           <div className="h-full flex flex-col items-center justify-center text-center py-12 px-8">
             <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center shadow-xl border-4 border-white/50 dark:border-slate-800/50">
@@ -168,10 +173,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   className="w-full max-w-sm flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-200 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50"
                   disabled={disabled}
                 >
-                  <Sparkles
-                    size={14}
-                    className="text-indigo-500 dark:text-indigo-400 flex-shrink-0"
-                  />
+                  <Sparkles size={14} className="text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
                   "{example}"
                 </button>
               ))}
@@ -179,7 +181,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         )}
 
-        {/* Messages */}
         <div className="space-y-4">
           {messages.map((msg) => (
             <div
@@ -219,7 +220,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           ))}
         </div>
 
-        {/* Processing State */}
         {isProcessing && (
           <div className="flex items-start gap-3 animate-in fade-in duration-500">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-lg flex items-center justify-center flex-shrink-0">
@@ -229,18 +229,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-indigo-200 dark:bg-indigo-900 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "150ms" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
-                    style={{ animationDelay: "300ms" }}
-                  ></div>
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                  <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
                 </div>
-                <span className="text-sm font-medium text-slate-600">
-                  Processing...
-                </span>
+                <span className="text-sm font-medium text-slate-600">Processing...</span>
               </div>
               {onStop && (
                 <button
@@ -258,14 +250,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
+      {/* Input */}
       <form
         onSubmit={handleSubmit}
         className="p-6 bg-gradient-to-t from-white/50 to-transparent dark:from-slate-900/50 dark:to-transparent border-t border-slate-100/50 dark:border-slate-800/50 transition-colors"
       >
         <div className="relative group">
           <input
-            ref={(el) => el?.focus()}
+            ref={inputRef} // FIX: stable ref, focused only on mount (see useEffect above)
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -301,21 +293,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
 
         {isInputFocused && (
-          <div className="absolute bottom-20 left-6 right-6 pointer-events-none opacity-0 group-focus-within:opacity-100 group-focus-within:animate-in fade-in duration-200 pointer-events-auto">
-            <div className="bg-slate-900/95 backdrop-blur-xl text-white text-xs p-3 rounded-2xl border border-white/20 font-mono max-w-sm mx-auto">
-              <div className="flex items-center gap-2 mb-1">
-                <kbd className="bg-white/20 px-2 py-1 rounded font-mono text-xs">
-                  Ctrl+Enter
-                </kbd>
-                <span>Send</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="bg-white/20 px-2 py-1 rounded font-mono text-xs">
-                  Esc
-                </kbd>
-                <span>Clear</span>
-              </div>
-            </div>
+          <div className="mt-2 flex gap-3 text-[10px] text-slate-400 font-mono">
+            <span>
+              <kbd className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Ctrl+Enter</kbd> Send
+            </span>
+            <span>
+              <kbd className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Esc</kbd> Clear
+            </span>
           </div>
         )}
       </form>

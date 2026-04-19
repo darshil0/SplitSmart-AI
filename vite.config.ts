@@ -8,9 +8,10 @@ import autoprefixer from "autoprefixer";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
+  // Suppress unused variable warning; env is available for future VITE_ lookups
+  void env;
 
   return {
-    // Production-ready server config
     server: {
       port: 3000,
       host: "0.0.0.0",
@@ -19,7 +20,6 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    // Optimized preview server
     preview: {
       port: 3001,
       host: "0.0.0.0",
@@ -27,11 +27,9 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       react({
-        // Fast Refresh optimizations
         fastRefresh: true,
       }),
 
-      // PWA Support (matches HTML manifest)
       VitePWA({
         registerType: "autoUpdate",
         devOptions: {
@@ -61,30 +59,26 @@ export default defineConfig(({ mode }) => {
       }),
     ],
 
-    // Path aliases for clean imports
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "."),
       },
     },
 
-    // Production optimizations
     build: {
-      sourcemap: true, // Keep for debugging
+      sourcemap: true,
       rollupOptions: {
         output: {
           manualChunks: {
-            // Split vendor chunks for better caching
             vendor: ["react", "react-dom", "lucide-react"],
             charts: ["recharts"],
             gemini: ["@google/generative-ai"],
           },
         },
       },
-      chunkSizeWarningLimit: 1000, // Allow larger chunks for charts
+      chunkSizeWarningLimit: 1000,
     },
 
-    // ESM/CDN optimizations (for HTML file deployment)
     optimizeDeps: {
       include: [
         "react",
@@ -95,19 +89,17 @@ export default defineConfig(({ mode }) => {
       ],
     },
 
-    // Tailwind CSS config
     css: {
       postcss: {
         plugins: [tailwindcssNesting, tailwindcss, autoprefixer],
       },
     },
 
-    // Environment variable prefix validation
     envPrefix: "VITE_",
 
-    // Development enhancements
     define: {
-      __APP_VERSION__: JSON.stringify("1.2.0"),
+      // FIX: version string updated to match package.json v1.3.0
+      __APP_VERSION__: JSON.stringify("1.3.0"),
       __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
     },
   };

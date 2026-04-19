@@ -14,7 +14,7 @@ import {
 
 interface HistorySectionProps {
   history: CompleteHistoryState[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void; // id = snapshot.timestamp.toString()
   onClearAll: () => void;
   onRestore?: (id: string) => void;
   currentIndex?: number;
@@ -32,14 +32,20 @@ const HistorySection: React.FC<HistorySectionProps> = ({
   const filteredHistory = React.useMemo(() => {
     if (!searchQuery.trim()) return history;
     const query = searchQuery.toLowerCase();
-    return history.filter(entry => {
-      const dateStr = new Date(entry.timestamp).toLocaleDateString().toLowerCase();
-      const participants = Object.values(entry.assignments).flat().map(p => p.toLowerCase());
-      const venue = entry.receiptData?.venue?.toLowerCase() || "";
-      
-      return dateStr.includes(query) || 
-             participants.some(p => p.includes(query)) ||
-             venue.includes(query);
+    return history.filter((entry) => {
+      const dateStr = new Date(entry.timestamp)
+        .toLocaleDateString()
+        .toLowerCase();
+      const participants = Object.values(entry.assignments)
+        .flat()
+        .map((p) => p.toLowerCase());
+      const venue = entry.receiptData?.venue?.toLowerCase() ?? "";
+
+      return (
+        dateStr.includes(query) ||
+        participants.some((p) => p.includes(query)) ||
+        venue.includes(query)
+      );
     });
   }, [history, searchQuery]);
 
@@ -65,7 +71,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/50 dark:border-slate-800/50 shadow-2xl overflow-hidden animate-in fade-in duration-500 transition-colors">
-      {/* Enhanced Header */}
+      {/* Header */}
       <div className="p-6 border-b border-slate-100/50 dark:border-slate-800/50 bg-gradient-to-r from-slate-50 to-indigo-50/30 dark:from-slate-900 dark:to-indigo-950/20 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -87,9 +93,12 @@ const HistorySection: React.FC<HistorySectionProps> = ({
         </div>
 
         <div className="relative group">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
-          <input 
-            type="text" 
+          <Search
+            size={16}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors"
+          />
+          <input
+            type="text"
             placeholder="Search by person, date, or venue..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -104,7 +113,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
         )}
       </div>
 
-      {/* Scrollable History List */}
+      {/* List */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-slate-300/50 dark:scrollbar-thumb-slate-700/50 scrollbar-track-transparent">
         {filteredHistory.map((entry, index) => {
           const date = new Date(entry.timestamp);
@@ -112,27 +121,34 @@ const HistorySection: React.FC<HistorySectionProps> = ({
             new Set(Object.values(entry.assignments).flat()),
           );
 
+          // FIX: use the snapshot's timestamp as the stable delete id so it
+          //      matches handleDeleteHistoryEntry in App.tsx (which looks up
+          //      entries by timestamp, not by array index).
+          const stableId = entry.timestamp.toString();
+
           return (
             <div
-              key={entry.timestamp.toString()}
+              key={stableId}
               className={`group relative bg-white/70 dark:bg-slate-800/40 backdrop-blur-sm border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 p-6 rounded-3xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-1 ${
                 index === currentIndex
                   ? "ring-4 ring-indigo-200/50 dark:ring-indigo-900/30 bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-300 dark:border-indigo-500 shadow-indigo-500/20"
                   : "hover:shadow-xl"
               }`}
             >
-              {/* Action Buttons Overlay */}
+              {/* Action buttons */}
               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0">
+                {onRestore && (
+                  <button
+                    onClick={() => onRestore(stableId)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-2xl shadow-lg hover:shadow-xl transition-all font-bold text-xs flex items-center gap-1"
+                    title="Restore this split"
+                  >
+                    <ArrowLeftRight size={14} />
+                    Load
+                  </button>
+                )}
                 <button
-                  onClick={() => onRestore?.(entry.timestamp.toString())}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-2xl shadow-lg hover:shadow-xl transition-all font-bold text-xs flex items-center gap-1"
-                  title="Restore this split"
-                >
-                  <ArrowLeftRight size={14} />
-                  Load
-                </button>
-                <button
-                  onClick={() => onDelete(entry.timestamp.toString())}
+                  onClick={() => onDelete(stableId)}
                   className="bg-rose-500 hover:bg-rose-600 text-white p-2.5 rounded-2xl shadow-lg hover:shadow-xl transition-all font-bold text-xs"
                   title="Delete this split"
                 >
@@ -140,7 +156,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                 </button>
               </div>
 
-              {/* Main Content */}
+              {/* Main content */}
               <div className="flex justify-between items-start mb-4">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2 text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">
@@ -187,7 +203,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                 </div>
               </div>
 
-              {/* Stats Cards */}
+              {/* Stats cards */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="flex items-center gap-3 p-3 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
                   <div className="bg-indigo-500/20 p-2 rounded-xl">
@@ -209,7 +225,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                   </div>
                   <div>
                     <div className="text-2xl font-black text-slate-900 dark:text-white">
-                      {entry.receiptData?.items.length || 0}
+                      {entry.receiptData?.items.length ?? 0}
                     </div>
                     <div className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                       Items
@@ -218,7 +234,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                 </div>
               </div>
 
-              {/* Participant Tags */}
+              {/* Participant tags */}
               <div className="flex flex-wrap gap-2">
                 {participants.slice(0, 4).map((person, idx) => (
                   <span

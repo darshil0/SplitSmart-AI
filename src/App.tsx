@@ -12,7 +12,6 @@ import {
   DistributionMethod,
   ItemOverridesMap,
   ReceiptItem,
-  HistoryEntry,
   ItemManualSplitsMap,
   SavedGroup,
   CompleteHistoryState,

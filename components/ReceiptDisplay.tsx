@@ -18,6 +18,13 @@ import {
   Calendar as CalendarIcon,
   MapPin,
   Sparkles,
+  Minus,
+  Plus,
+  User,
+  Users,
+  Check,
+  Edit3,
+  Settings2,
 } from "lucide-react";
 
 interface ReceiptDisplayProps {

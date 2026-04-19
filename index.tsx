@@ -1,4 +1,4 @@
-// src/index.tsx - SplitSmart AI Production Entry Point (v1.2.0)
+// src/index.tsx - SplitSmart AI Production Entry Point (v1.3.0)
 
 import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -112,7 +112,7 @@ const initApp = () => {
   // Performance metrics
   if (import.meta.env.PROD && "performance" in window) {
     console.log(
-      `🚀 SplitSmart v1.2.0 loaded in ${performance.now().toFixed(0)}ms`,
+      `🚀 SplitSmart v1.3.0 loaded in ${performance.now().toFixed(0)}ms`,
     );
   }
 };

@@ -1,10 +1,16 @@
-// src/types/index.ts
-// SplitSmart AI - Complete TypeScript Definitions (v1.2.0)
+// types.ts
+// SplitSmart AI - Complete TypeScript Definitions (v1.3.1)
 
 /**
  * CORE RECEIPT DATA
  */
-export type ItemCategory = "Food" | "Drink" | "Alcohol" | "Service" | "Tax" | "Other";
+export type ItemCategory =
+  | "Food"
+  | "Drink"
+  | "Alcohol"
+  | "Service"
+  | "Tax"
+  | "Other";
 
 export interface ReceiptItem {
   id: string;
@@ -33,7 +39,7 @@ export interface AssignmentMap {
 }
 
 export interface ItemManualSplitsMap {
-  [itemId: string]: { [name: string]: number }; // itemId → {person: percentage}
+  [itemId: string]: { [name: string]: number };
 }
 
 export interface ItemTaxTipOverride {
@@ -72,13 +78,12 @@ export interface PersonSummary {
   totalOwed: number;
 }
 
-
 /**
  * HISTORY & STATE MANAGEMENT
  */
 export interface HistoryEntry {
   id: string;
-  timestamp: number; // Renamed from 'date' for consistency
+  timestamp: number;
   receiptData: ReceiptData;
   assignments: AssignmentMap;
   itemManualSplits: ItemManualSplitsMap;
@@ -89,7 +94,14 @@ export interface HistoryEntry {
   distributionMethod: DistributionMethod;
 }
 
+/**
+ * FIX: added `id` field (timestamp as string) so HistorySection can pass a
+ *      stable, non-index identifier to onDelete / onRestore callbacks.
+ *      Also added optional `name` for display labelling.
+ */
 export interface CompleteHistoryState {
+  id: string; // snapshot.timestamp.toString() — stable across re-renders
+  name?: string; // optional display label, e.g. "Split 4/18/2026"
   assignments: AssignmentMap;
   itemManualSplits: ItemManualSplitsMap;
   receiptData: ReceiptData | null;
@@ -129,7 +141,7 @@ export interface TestResult {
   status: TestStatus;
   duration?: number;
   error?: string;
-  actual?: any;
+  actual?: unknown;
   timestamp: number;
 }
 
@@ -140,6 +152,3 @@ export interface TestSuite {
   status: TestStatus;
   duration: number;
 }
-
-
-

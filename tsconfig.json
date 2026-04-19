@@ -22,10 +22,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@components/*": ["components/*"],
-      "@services/*": ["services/*"],
-      "@types/*": ["types/*"]
+      "@/*": ["./*"]
     },
     "types": ["vite/client"]
   },

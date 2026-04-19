@@ -72,12 +72,6 @@ export interface PersonSummary {
   totalOwed: number;
 }
 
-export interface SplitSummary {
-  participants: PersonSummary[];
-  totalTax: number;
-  totalTip: number;
-  grandTotal: number;
-}
 
 /**
  * HISTORY & STATE MANAGEMENT
@@ -147,68 +141,5 @@ export interface TestSuite {
   duration: number;
 }
 
-/**
- * COMPONENT PROPS
- */
-export interface ReceiptDisplayProps {
-  data: ReceiptData;
-  assignments: AssignmentMap;
-  itemManualSplits: ItemManualSplitsMap;
-  itemOverrides: ItemOverridesMap;
-  allParticipants: string[];
-  distributionMethod: DistributionMethod;
-  isLoading?: boolean;
-  onUpdateItem: (item: ReceiptItem) => void;
-  onUpdateAssignments: (itemId: string, names: string[]) => void;
-  onUpdateManualSplits: (
-    itemId: string,
-    splits: { [name: string]: number } | null,
-  ) => void;
-  onDistributionChange: (method: DistributionMethod) => void;
-  onOverrideChange: (overrides: ItemOverridesMap) => void;
-}
 
-export interface ChatInterfaceProps {
-  messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
-  isProcessing: boolean;
-  disabled: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
-}
 
-export interface SummaryDisplayProps {
-  receiptData: ReceiptData | null;
-  assignments: AssignmentMap;
-  itemManualSplits: ItemManualSplitsMap;
-  distributionMethod: DistributionMethod;
-  itemOverrides: ItemOverridesMap;
-  participants: string[];
-  onSaveHistory: (entry: HistoryEntry) => void;
-  isSaved: boolean;
-}
-
-/**
- * UTILITY TYPES
- */
-export type ParticipantName = string;
-export type ItemId = string;
-export type CurrencyCode = string;
-
-export interface CalculationContext {
-  receiptData: ReceiptData;
-  assignments: AssignmentMap;
-  manualSplits: ItemManualSplitsMap;
-  overrides: ItemOverridesMap;
-  distributionMethod: DistributionMethod;
-}
-
-/**
- * API RESPONSE TYPES
- */
-export interface GeminiResponse {
-  assignments: AssignmentMap;
-  reply: string;
-}

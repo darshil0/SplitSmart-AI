@@ -106,12 +106,10 @@ const App: React.FC = () => {
   const [extraParticipants, setExtraParticipants] = useState<string[]>([]);
 
   // Undo/Redo state
-  const historyRef = useRef(history);
   const historyIndexRef = useRef(0);
 
-  // Sync history refs
+  // Sync history index
   useEffect(() => {
-    historyRef.current = history;
     historyIndexRef.current = Math.max(0, history.length - 1);
   }, [history]);
 
@@ -882,24 +880,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Undo/Redo Toast - Hidden for now, can be enhanced */}
-      {false && (
-        <div className="fixed bottom-6 left-6 right-6 lg:left-auto lg:right-6 lg:w-96 z-[70] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 p-4 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-700">
-              Undo available
-            </span>
-            <div className="flex gap-2">
-              <button className="px-4 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl transition-all font-semibold">
-                Undo
-              </button>
-              <button className="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all font-semibold">
-                Redo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

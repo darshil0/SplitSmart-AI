@@ -22,17 +22,12 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["src/*"]
     },
     "types": ["vite/client"]
   },
   "include": [
-    "App.tsx",
-    "index.tsx",
-    "types.ts",
-    "components/**/*",
-    "services/**/*",
-    "tests/**/*",
+    "src/**/*",
     "index.html"
   ],
   "exclude": ["node_modules", "dist", "**/*.config.js"],

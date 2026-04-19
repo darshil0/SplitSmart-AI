@@ -1,4 +1,4 @@
-# SplitSmart AI (v1.3.0) 🚀
+# SplitSmart AI (v1.3.1) 🚀
 
 A modern, split-screen bill splitting application powered by Google's Gemini 1.5 Pro model. Upload a receipt image and use natural language to assign items to friends.
 

@@ -1,13 +1,14 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { ReceiptData, AssignmentMap } from "../types";
 
-const API_KEY = import.meta.env.VITE_API_KEY as string;
+// FIX: renamed from VITE_API_KEY to VITE_GEMINI_API_KEY to match README / .env.example
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 
 if (!API_KEY) {
   console.error(
-    "VITE_API_KEY is not defined. Please set it in your .env file.",
+    "VITE_GEMINI_API_KEY is not defined. Please set it in your .env file.",
   );
-  throw new Error("VITE_API_KEY is not defined.");
+  throw new Error("VITE_GEMINI_API_KEY is not defined.");
 }
 
 const ai = new GoogleGenerativeAI(API_KEY);
@@ -30,9 +31,9 @@ const receiptSchema: any = {
           description: { type: SchemaType.STRING },
           price: { type: SchemaType.NUMBER },
           quantity: { type: SchemaType.NUMBER },
-          category: { 
+          category: {
             type: SchemaType.STRING,
-            enum: ["Food", "Drink", "Alcohol", "Service", "Tax", "Other"]
+            enum: ["Food", "Drink", "Alcohol", "Service", "Tax", "Other"],
           },
         },
         required: ["id", "description", "price", "quantity", "category"],
@@ -76,7 +77,6 @@ CONSISTENCY CHECK:
 Output ONLY valid JSON.`,
   });
 
-  // Clean base64 data URL prefix and detect mime type
   let cleanBase64 = base64Image;
   let mimeType = "image/png";
 
@@ -108,7 +108,6 @@ Output ONLY valid JSON.`,
 
     const data = JSON.parse(response.text()) as ReceiptData;
 
-    // Validate and sanitize numeric fields
     data.items = (data.items || []).map((item, index) => ({
       ...item,
       id: item.id || `item_${index}`,
@@ -142,7 +141,6 @@ export const processChatCommand = async (
     ? `Current user: "${currentUser}". "I/me/my" refers to "${currentUser}".`
     : "";
 
-  // Define schema for chat response
   const chatSchema: any = {
     type: SchemaType.OBJECT,
     properties: {

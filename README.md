@@ -21,7 +21,7 @@ A modern, split-screen bill splitting application powered by Google's Gemini 1.5
   | **EQUAL** | Divided evenly among participants |
   | **MANUAL** | Custom tax/tip per item |
 
-## 🚀 What's New in v1.3.0
+## 🚀 What's New in v1.3.1
 
 ### ✨ New Features
 

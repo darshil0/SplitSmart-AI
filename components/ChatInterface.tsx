@@ -1,14 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { ChatMessage } from "../types";
-import {
-  Send,
-  Bot,
-  User as UserIcon,
-  Sparkles,
-  Undo2,
-  Redo2,
-  StopCircle,
-} from "lucide-react";
+import { Send, Bot, Sparkles, Undo2, Redo2, StopCircle } from "lucide-react";
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
@@ -40,9 +32,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Optimized scroll to bottom
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ 
-      behavior: "smooth", 
-      block: "end" 
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
     });
   }, []);
 
@@ -55,7 +47,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (disabled || isProcessing) return;
-      
+
       // Ctrl/Cmd + Enter to send
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
@@ -88,9 +80,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Message examples for empty state
   const exampleCommands = [
     "John had the burger",
-    "Sarah and I shared the pizza", 
+    "Sarah and I shared the pizza",
     "Split appetizers between everyone",
-    "Remove Mike from drinks"
+    "Remove Mike from drinks",
   ];
 
   return (
@@ -110,7 +102,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <span className="text-xs font-bold text-emerald-200 uppercase tracking-wider">
                 Live
               </span>
-              <span className="text-xs text-slate-400 font-mono">Gemini 1.5 Pro</span>
+              <span className="text-xs text-slate-400 font-mono">
+                Gemini 1.5 Pro
+              </span>
             </div>
           </div>
         </div>
@@ -130,9 +124,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           >
             <Undo2 size={16} className="group-hover:scale-110" />
           </button>
-          
+
           <div className="w-px h-4 bg-slate-700/50 mx-1"></div>
-          
+
           <button
             onClick={onRedo}
             disabled={!canRedo || disabled || isProcessing}
@@ -150,7 +144,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Messages Container */}
-      <div 
+      <div
         ref={messagesContainerRef}
         className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-slate-50/70 to-white/50 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
       >
@@ -174,7 +168,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   className="w-full max-w-sm flex items-center gap-3 p-3 bg-white/60 hover:bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl text-sm font-medium text-slate-800 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50"
                   disabled={disabled}
                 >
-                  <Sparkles size={14} className="text-indigo-500 flex-shrink-0" />
+                  <Sparkles
+                    size={14}
+                    className="text-indigo-500 flex-shrink-0"
+                  />
                   "{example}"
                 </button>
               ))}
@@ -232,10 +229,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-indigo-200 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                  <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                  <div
+                    className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  ></div>
                 </div>
-                <span className="text-sm font-medium text-slate-600">Processing...</span>
+                <span className="text-sm font-medium text-slate-600">
+                  Processing...
+                </span>
               </div>
               {onStop && (
                 <button
@@ -254,7 +259,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-6 bg-gradient-to-t from-white/50 to-transparent border-t border-slate-100/50">
+      <form
+        onSubmit={handleSubmit}
+        className="p-6 bg-gradient-to-t from-white/50 to-transparent border-t border-slate-100/50"
+      >
         <div className="relative group">
           <input
             ref={(el) => el?.focus()}
@@ -264,16 +272,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onFocus={() => setIsInputFocused(true)}
             onBlur={() => setIsInputFocused(false)}
             placeholder={
-              disabled 
-                ? "Upload receipt first..." 
-                : isProcessing 
-                ? "AI is thinking..." 
-                : "Type your split command (Ctrl+Enter)"
+              disabled
+                ? "Upload receipt first..."
+                : isProcessing
+                  ? "AI is thinking..."
+                  : "Type your split command (Ctrl+Enter)"
             }
             disabled={disabled || isProcessing}
             className={`w-full pl-5 pr-14 py-4 text-sm font-semibold transition-all duration-200 ${
-              isInputFocused 
-                ? "bg-white border-2 border-indigo-500 shadow-xl shadow-indigo-200 ring-4 ring-indigo-50/50" 
+              isInputFocused
+                ? "bg-white border-2 border-indigo-500 shadow-xl shadow-indigo-200 ring-4 ring-indigo-50/50"
                 : "bg-white/70 border border-slate-200 hover:border-slate-300 hover:shadow-lg"
             } rounded-3xl focus:outline-none focus:placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed`}
             autoComplete="off"
@@ -291,16 +299,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <Send size={18} />
           </button>
         </div>
-        
+
         {isInputFocused && (
           <div className="absolute bottom-20 left-6 right-6 pointer-events-none opacity-0 group-focus-within:opacity-100 group-focus-within:animate-in fade-in duration-200 pointer-events-auto">
             <div className="bg-slate-900/95 backdrop-blur-xl text-white text-xs p-3 rounded-2xl border border-white/20 font-mono max-w-sm mx-auto">
               <div className="flex items-center gap-2 mb-1">
-                <kbd className="bg-white/20 px-2 py-1 rounded font-mono text-xs">Ctrl+Enter</kbd>
+                <kbd className="bg-white/20 px-2 py-1 rounded font-mono text-xs">
+                  Ctrl+Enter
+                </kbd>
                 <span>Send</span>
               </div>
               <div className="flex items-center gap-2">
-                <kbd className="bg-white/20 px-2 py-1 rounded font-mono text-xs">Esc</kbd>
+                <kbd className="bg-white/20 px-2 py-1 rounded font-mono text-xs">
+                  Esc
+                </kbd>
                 <span>Clear</span>
               </div>
             </div>

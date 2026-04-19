@@ -22,21 +22,23 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@components/*": ["src/components/*"],
-      "@services/*": ["src/services/*"],
-      "@types/*": ["src/types/*"]
-    }
+      "@/*": ["./*"],
+      "@components/*": ["components/*"],
+      "@services/*": ["services/*"],
+      "@types/*": ["types/*"]
+    },
+    "types": ["vite/client"]
   },
   "include": [
-    "src/**/*",
+    "App.tsx",
+    "index.tsx",
+    "types.ts",
+    "components/**/*",
+    "services/**/*",
+    "tests/**/*",
     "index.html"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.config.js"
-  ],
+  "exclude": ["node_modules", "dist", "**/*.config.js"],
   "ts-node": {
     "esm": true,
     "experimentalSpecifierResolution": "node"

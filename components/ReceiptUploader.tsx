@@ -59,23 +59,28 @@ const ReceiptUploader: React.FC<ReceiptUploaderProps> = ({
         disabled={isProcessing}
         tabIndex={-1}
       />
-      <div className={`p-4 rounded-full mb-4 transition-transform ${
-        isProcessing 
-          ? "bg-gray-200 text-gray-400" 
-          : "bg-indigo-100 text-indigo-600 group-hover:scale-110"
-      }`}>
+      <div
+        className={`p-4 rounded-full mb-4 transition-transform ${
+          isProcessing
+            ? "bg-gray-200 text-gray-400"
+            : "bg-indigo-100 text-indigo-600 group-hover:scale-110"
+        }`}
+      >
         <Camera size={32} />
       </div>
-      <h3 className={`text-lg font-semibold mb-2 transition-colors ${
-        isProcessing ? "text-gray-500" : "text-gray-700 group-hover:text-indigo-700"
-      }`}>
+      <h3
+        className={`text-lg font-semibold mb-2 transition-colors ${
+          isProcessing
+            ? "text-gray-500"
+            : "text-gray-700 group-hover:text-indigo-700"
+        }`}
+      >
         {isProcessing ? "Processing..." : "Upload Receipt"}
       </h3>
       <p className="text-sm text-center max-w-xs transition-colors">
-        {isProcessing 
-          ? "Analyzing your receipt..." 
-          : "Click to select or take a photo of your receipt to begin parsing."
-        }
+        {isProcessing
+          ? "Analyzing your receipt..."
+          : "Click to select or take a photo of your receipt to begin parsing."}
       </p>
     </div>
   );

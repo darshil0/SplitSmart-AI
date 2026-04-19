@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { TestResult, TestStatus } from "../types";
+import { TestResult } from "../types";
 import {
   Play,
   RotateCcw,
@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Activity,
   Terminal,
-  Percent,
 } from "lucide-react";
 import { runTestSuite } from "../tests/suite";
 
@@ -28,7 +27,7 @@ const TestDashboard: React.FC = () => {
   const startTests = useCallback(async () => {
     setIsTesting(true);
     setResults([]);
-    const report = await runTestSuite((update: TestResult) => {
+    await runTestSuite((update: TestResult) => {
       setResults((prev) => {
         const index = prev.findIndex((r) => r.id === update.id);
         if (index > -1) {
@@ -52,9 +51,7 @@ const TestDashboard: React.FC = () => {
     const failed = results.filter((r) => r.status === "failed").length;
     const running = results.filter((r) => r.status === "running").length;
     const completed = total - running;
-    const coverage = completed > 0 
-      ? Math.round((passed / completed) * 100) 
-      : 0;
+    const coverage = completed > 0 ? Math.round((passed / completed) * 100) : 0;
 
     return { total, passed, failed, running, coverage };
   }, [results]);
@@ -168,7 +165,10 @@ const TestDashboard: React.FC = () => {
                   <XCircle size={18} className="text-rose-500" />
                 )}
                 {test.status === "running" && (
-                  <Activity size={18} className="text-indigo-400 animate-spin" />
+                  <Activity
+                    size={18}
+                    className="text-indigo-400 animate-spin"
+                  />
                 )}
               </div>
 
@@ -178,7 +178,7 @@ const TestDashboard: React.FC = () => {
                     className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border shrink-0 ${
                       test.category === "BVT"
                         ? "text-indigo-400 border-indigo-400/30 bg-indigo-500/5"
-                        : test.category === "Edge Case"
+                        : test.category === "Edge"
                           ? "text-amber-400 border-amber-400/30 bg-amber-500/5"
                           : test.category === "Regression"
                             ? "text-purple-400 border-purple-400/30 bg-purple-500/5"

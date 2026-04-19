@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   ReceiptData,
   AssignmentMap,
@@ -9,11 +9,9 @@ import {
 } from "../types";
 import {
   User,
-  Receipt as ReceiptIcon,
   Settings2,
   Edit3,
   Check,
-  X,
   Plus,
   Minus,
   Users,
@@ -296,10 +294,9 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
             const isEditing = editingItemId === item.id;
             const isSplitting = splittingItemId === item.id;
             const hasErrors = isEditing && Object.keys(errors).length > 0;
-            const currentTotalSplit: number = Object.values(manualSplits || {}).reduce(
-              (a: number, b: number) => a + b,
-              0,
-            );
+            const currentTotalSplit: number = Object.values(
+              manualSplits || {},
+            ).reduce((a: number, b: number) => a + b, 0);
             const isSplitBalanced =
               !manualSplits || Math.abs(currentTotalSplit - item.price) < 0.01;
 
@@ -651,7 +648,9 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           min="0"
                           placeholder="Auto-calc"
                           className={`w-full pl-6 pr-3 py-1.5 bg-white border rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${override?.tax !== undefined && override.tax < 0 ? "border-rose-400" : "border-slate-200"}`}
-                          value={override?.tax != null ? override.tax.toString() : ""}
+                          value={
+                            override?.tax != null ? override.tax.toString() : ""
+                          }
                           onChange={(e) =>
                             handleOverrideChange(item.id, "tax", e.target.value)
                           }
@@ -672,7 +671,9 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
                           min="0"
                           placeholder="Auto-calc"
                           className={`w-full pl-6 pr-3 py-1.5 bg-white border rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${override?.tip !== undefined && override.tip < 0 ? "border-rose-400" : "border-slate-200"}`}
-                          value={override?.tip != null ? override.tip.toString() : ""}
+                          value={
+                            override?.tip != null ? override.tip.toString() : ""
+                          }
                           onChange={(e) =>
                             handleOverrideChange(item.id, "tip", e.target.value)
                           }

@@ -38,7 +38,7 @@ const WalkthroughModal: React.FC<WalkthroughModalProps> = ({ onClose }) => {
 
   return (
     <>
-      <div 
+      <div
         className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
         onKeyDown={handleKeyDown}
         tabIndex={-1}
@@ -51,7 +51,10 @@ const WalkthroughModal: React.FC<WalkthroughModalProps> = ({ onClose }) => {
           <div className="p-8">
             <div className="flex justify-between items-start mb-8">
               <div>
-                <h2 id="modal-title" className="text-2xl font-bold text-slate-900">
+                <h2
+                  id="modal-title"
+                  className="text-2xl font-bold text-slate-900"
+                >
                   Welcome to SplitSmart
                 </h2>
                 <p className="text-slate-500 mt-1 text-sm leading-relaxed">
@@ -63,7 +66,10 @@ const WalkthroughModal: React.FC<WalkthroughModalProps> = ({ onClose }) => {
                 className="p-2 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-full transition-all group"
                 aria-label="Close walkthrough"
               >
-                <X size={20} className="text-slate-400 group-hover:text-slate-600" />
+                <X
+                  size={20}
+                  className="text-slate-400 group-hover:text-slate-600"
+                />
               </button>
             </div>
 

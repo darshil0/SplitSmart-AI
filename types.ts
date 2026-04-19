@@ -111,6 +111,7 @@ export interface TestCase {
     chatCommands?: string[];
   };
   expected: Partial<ReceiptData> | Partial<AssignmentMap>;
+  fn: () => Promise<void>;
 }
 
 export interface TestResult {
@@ -145,7 +146,10 @@ export interface ReceiptDisplayProps {
   isLoading?: boolean;
   onUpdateItem: (item: ReceiptItem) => void;
   onUpdateAssignments: (itemId: string, names: string[]) => void;
-  onUpdateManualSplits: (itemId: string, splits: { [name: string]: number } | null) => void;
+  onUpdateManualSplits: (
+    itemId: string,
+    splits: { [name: string]: number } | null,
+  ) => void;
   onDistributionChange: (method: DistributionMethod) => void;
   onOverrideChange: (overrides: ItemOverridesMap) => void;
 }

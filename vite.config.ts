@@ -2,6 +2,9 @@ import path from "path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import tailwindcss from "tailwindcss";
+import tailwindcssNesting from "tailwindcss/nesting/index.js";
+import autoprefixer from "autoprefixer";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
@@ -15,7 +18,7 @@ export default defineConfig(({ mode }) => {
         host: "localhost",
       },
     },
-    
+
     // Optimized preview server
     preview: {
       port: 3001,
@@ -27,7 +30,7 @@ export default defineConfig(({ mode }) => {
         // Fast Refresh optimizations
         fastRefresh: true,
       }),
-      
+
       // PWA Support (matches HTML manifest)
       VitePWA({
         registerType: "autoUpdate",
@@ -61,10 +64,10 @@ export default defineConfig(({ mode }) => {
     // Path aliases for clean imports
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "src"),
-        "@components": path.resolve(__dirname, "src/components"),
-        "@services": path.resolve(__dirname, "src/services"),
-        "@types": path.resolve(__dirname, "src/types"),
+        "@": path.resolve(__dirname, "."),
+        "@components": path.resolve(__dirname, "components"),
+        "@services": path.resolve(__dirname, "services"),
+        "@types": path.resolve(__dirname, "types"),
       },
     },
 
@@ -98,11 +101,7 @@ export default defineConfig(({ mode }) => {
     // Tailwind CSS config
     css: {
       postcss: {
-        plugins: [
-          require("tailwindcss/nesting"),
-          require("tailwindcss"),
-          require("autoprefixer"),
-        ],
+        plugins: [tailwindcssNesting, tailwindcss, autoprefixer],
       },
     },
 

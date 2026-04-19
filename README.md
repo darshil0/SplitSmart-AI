@@ -9,15 +9,16 @@ A modern, split-screen bill splitting application powered by Google's Gemini 1.5
 - **Smart Pronoun Resolution**: Enter name → AI understands "I/me/my"
 - **Real-time Visualizations**: Pie charts + detailed per-person breakdowns
 - **Flexible Tax/Tip Splitting**:
-  | Method       | Description                          |
+  | Method | Description |
   |--------------|--------------------------------------|
   | **PROPORTIONAL** | Based on each person's total item cost |
-  | **EQUAL**    | Divided evenly among participants    |
-  | **MANUAL**   | Custom tax/tip per item              |
+  | **EQUAL** | Divided evenly among participants |
+  | **MANUAL** | Custom tax/tip per item |
 
 ## 🚀 What's New in v1.2.0
 
 ### ✨ New Features
+
 - **Robust Undo/Redo**: Full history tracking with unlimited steps
 - **Production State Management**: Single source of truth, no data loss
 - **Enhanced Mobile UX**: Perfect responsive tabs + touch gestures
@@ -25,9 +26,11 @@ A modern, split-screen bill splitting application powered by Google's Gemini 1.5
 - **Performance**: `useCallback`, `useMemo`, `useRef` everywhere
 
 ### 🔧 Key Fixes
+
 - **Fixed History System**: Single `history[]` array + `historyIndexRef`
 - **Patched Gemini API**: Proper `generateContent([imagePart])` + `responseSchema`
 - **UI Polish**: Smooth loading states, mobile tabs, gradient branding
+- **TS & Stability**: Resolved all environment-level TypeScript errors and stabilized the test suite.
 
 ## 🛠️ Tech Stack
 
@@ -62,7 +65,7 @@ npm run build
 
 ```
 "Tom had the burger and fries"
-"Sarah and I shared the pizza" 
+"Sarah and I shared the pizza"
 "Split appetizers between everyone"
 "Remove Tom from the drinks"
 "David had the steak"
@@ -92,12 +95,12 @@ npm run build
 
 ## 📊 Why SplitSmart?
 
-| ✅ Zero Setup | Single image upload starts everything |
-|--------------|---------------------------------------|
-| ✅ 100% Accurate | Schema-enforced JSON output |
-| ✅ Mobile-First | Perfect on iPhone/Android/Desktop |
-| ✅ No Data Loss | Auto-saves every interaction |
-| ✅ Privacy-First | Local storage only |
+| ✅ Zero Setup    | Single image upload starts everything |
+| ---------------- | ------------------------------------- |
+| ✅ 100% Accurate | Schema-enforced JSON output           |
+| ✅ Mobile-First  | Perfect on iPhone/Android/Desktop     |
+| ✅ No Data Loss  | Auto-saves every interaction          |
+| ✅ Privacy-First | Local storage only                    |
 
 ## 🤝 Contributing
 
@@ -117,8 +120,8 @@ npm run type-check
 
 MIT License - Free for personal & commercial use.
 
-***
+---
 
-**Built with ❤️ by Darshil for effortless group bill splitting**  
+**Built with ❤️ by Darshil for effortless group bill splitting**
 
-*Made with React 19 + Gemini 1.5 Pro (2025)*
+_Made with React 19 + Gemini 1.5 Pro (2025)_

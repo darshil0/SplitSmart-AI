@@ -57,7 +57,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
 
   const summary = useMemo<PersonSummary[]>(() => {
     if (!receiptData) return [];
-    
+
     const peopleMap: Record<string, PersonSummary> = {};
     const initPerson = (name: string) => {
       if (!peopleMap[name])
@@ -106,33 +106,45 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
           if (override?.tax !== undefined) {
             itemTax = override.tax;
           } else if (subtotalOfItemsWithNoTaxOverride > 0) {
-            itemTax = (item.price / subtotalOfItemsWithNoTaxOverride) * remainingTaxPool;
+            itemTax =
+              (item.price / subtotalOfItemsWithNoTaxOverride) *
+              remainingTaxPool;
           }
 
           if (override?.tip !== undefined) {
             itemTip = override.tip;
           } else if (subtotalOfItemsWithNoTipOverride > 0) {
-            itemTip = (item.price / subtotalOfItemsWithNoTipOverride) * remainingTipPool;
+            itemTip =
+              (item.price / subtotalOfItemsWithNoTipOverride) *
+              remainingTipPool;
           }
         }
 
         assignedPeople.forEach((person) => {
           initPerson(person);
 
-          const amountForThisPerson = manualSplits?.[person] !== undefined
-            ? manualSplits[person]
-            : item.price / splitCount;
+          const amountForThisPerson =
+            manualSplits?.[person] !== undefined
+              ? manualSplits[person]
+              : item.price / splitCount;
 
           peopleMap[person].items.push({
-            description: item.description + 
-              (manualSplits ? " (Custom)" : 
-              splitCount > 1 ? ` (1/${splitCount})` : ""),
+            description:
+              item.description +
+              (manualSplits
+                ? " (Custom)"
+                : splitCount > 1
+                  ? ` (1/${splitCount})`
+                  : ""),
             amount: amountForThisPerson,
           });
           peopleMap[person].subtotal += amountForThisPerson;
 
           if (distributionMethod === "MANUAL") {
-            const ratio = item.price > 0 ? amountForThisPerson / item.price : 1 / splitCount;
+            const ratio =
+              item.price > 0
+                ? amountForThisPerson / item.price
+                : 1 / splitCount;
             peopleMap[person].taxShare += itemTax * ratio;
             peopleMap[person].tipShare += itemTip * ratio;
           }
@@ -147,7 +159,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     const unassignedItems = receiptData.items.filter(
       (item) => !assignedItemIds.has(item.id),
     );
-    
+
     if (unassignedItems.length > 0) {
       initPerson("Unassigned");
       unassignedItems.forEach((item) => {
@@ -163,14 +175,16 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
             peopleMap["Unassigned"].taxShare += override.tax;
           } else if (subtotalOfItemsWithNoTaxOverride > 0) {
             peopleMap["Unassigned"].taxShare +=
-              (item.price / subtotalOfItemsWithNoTaxOverride) * remainingTaxPool;
+              (item.price / subtotalOfItemsWithNoTaxOverride) *
+              remainingTaxPool;
           }
 
           if (override?.tip !== undefined) {
             peopleMap["Unassigned"].tipShare += override.tip;
           } else if (subtotalOfItemsWithNoTipOverride > 0) {
             peopleMap["Unassigned"].tipShare +=
-              (item.price / subtotalOfItemsWithNoTipOverride) * remainingTipPool;
+              (item.price / subtotalOfItemsWithNoTipOverride) *
+              remainingTipPool;
           }
         }
       });
@@ -178,7 +192,9 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
 
     const peopleList = Object.values(peopleMap);
     const totalAssignedSubtotal = receiptData.subtotal || 1;
-    const realPeopleCount = peopleList.filter((p) => p.name !== "Unassigned").length;
+    const realPeopleCount = peopleList.filter(
+      (p) => p.name !== "Unassigned",
+    ).length;
 
     peopleList.forEach((person) => {
       if (distributionMethod === "PROPORTIONAL") {
@@ -196,7 +212,13 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
     });
 
     return peopleList.sort((a, b) => b.totalOwed - a.totalOwed);
-  }, [receiptData, assignments, itemManualSplits, distributionMethod, itemOverrides]);
+  }, [
+    receiptData,
+    assignments,
+    itemManualSplits,
+    distributionMethod,
+    itemOverrides,
+  ]);
 
   const realPeopleCount = useMemo(
     () => summary.filter((p) => p.name !== "Unassigned").length,
@@ -212,11 +234,15 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
       .map((p) => p.name);
     onSaveHistory({
       id: Date.now().toString(),
-      date: Date.now(),
-      total: receiptData.total,
-      currency: receiptData.currency,
+      timestamp: Date.now(),
+      receiptData,
+      assignments,
+      itemManualSplits,
       participants,
       itemCount: receiptData.items.length,
+      total: receiptData.total,
+      currency: receiptData.currency,
+      distributionMethod,
     });
   };
 
@@ -259,7 +285,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   const chartData = summary.map((p, index) => ({
     name: p.name,
     value: p.totalOwed,
-    color: p.name === "Unassigned" ? "#cbd5e1" : COLORS[index % COLORS.length]
+    color: p.name === "Unassigned" ? "#cbd5e1" : COLORS[index % COLORS.length],
   }));
 
   return (
@@ -323,9 +349,12 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
                 }}
                 itemStyle={{ fontSize: "10px", fontWeight: "bold" }}
                 labelStyle={{ fontWeight: "bold" }}
-                formatter={(value: number, name: string) => [
-                  `${receiptData.currency}${value.toFixed(2)}`,
-                  name,
+                formatter={(
+                  value: number | string | undefined,
+                  name: string | undefined,
+                ) => [
+                  `${receiptData.currency}${Number(value || 0).toFixed(2)}`,
+                  name || "",
                 ]}
               />
             </PieChart>
@@ -337,7 +366,9 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
           </div>
           <div className="text-lg font-black text-slate-900 flex items-center gap-2">
             {topPerson ? topPerson.name : "N/A"}
-            {topPerson && <ArrowUpRight size={20} className="text-indigo-500" />}
+            {topPerson && (
+              <ArrowUpRight size={20} className="text-indigo-500" />
+            )}
           </div>
           <p className="text-xs text-slate-500 leading-relaxed">
             The total is split between <b>{realPeopleCount}</b> people.{" "}
@@ -370,8 +401,8 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
                 ></div>
                 <span
                   className={`font-bold tracking-tight ${
-                    person.name === "Unassigned" 
-                      ? "text-slate-400 italic" 
+                    person.name === "Unassigned"
+                      ? "text-slate-400 italic"
                       : "text-slate-800"
                   }`}
                 >

@@ -1,10 +1,12 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { ReceiptData, AssignmentMap } from "../types";
 
 const API_KEY = import.meta.env.VITE_API_KEY as string;
 
 if (!API_KEY) {
-  console.error("VITE_API_KEY is not defined. Please set it in your .env file.");
+  console.error(
+    "VITE_API_KEY is not defined. Please set it in your .env file.",
+  );
   throw new Error("VITE_API_KEY is not defined.");
 }
 
@@ -16,30 +18,29 @@ const generationConfig = {
 };
 
 // Define JSON schema for receipt parsing
-const receiptSchema = {
-  type: "object",
+const receiptSchema: any = {
+  type: SchemaType.OBJECT,
   properties: {
     items: {
-      type: "array",
+      type: SchemaType.ARRAY,
       items: {
-        type: "object",
+        type: SchemaType.OBJECT,
         properties: {
-          id: { type: "string" },
-          description: { type: "string" },
-          price: { type: "number" },
-          quantity: { type: "number" },
+          id: { type: SchemaType.STRING },
+          description: { type: SchemaType.STRING },
+          price: { type: SchemaType.NUMBER },
+          quantity: { type: SchemaType.NUMBER },
         },
         required: ["id", "description", "price", "quantity"],
       },
     },
-    currency: { type: "string" },
-    subtotal: { type: "number" },
-    tax: { type: "number" },
-    tip: { type: "number" },
-    total: { type: "number" },
+    currency: { type: SchemaType.STRING },
+    subtotal: { type: SchemaType.NUMBER },
+    tax: { type: SchemaType.NUMBER },
+    tip: { type: SchemaType.NUMBER },
+    total: { type: SchemaType.NUMBER },
   },
   required: ["items", "currency", "subtotal", "tax", "tip", "total"],
-  additionalProperties: false,
 };
 
 // 1. Parse Receipt Image
@@ -69,12 +70,15 @@ Ensure: sum(items[].price) ≈ subtotal, total = subtotal + tax + tip`,
   // Clean base64 data URL prefix and detect mime type
   let cleanBase64 = base64Image;
   let mimeType = "image/png";
-  
+
   if (base64Image.startsWith("data:image/")) {
     const matches = base64Image.match(/^data:image\/([a-zA-Z0-9]+);base64,/);
     if (matches) {
       mimeType = `image/${matches[1]}`;
-      cleanBase64 = base64Image.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, "");
+      cleanBase64 = base64Image.replace(
+        /^data:image\/[a-zA-Z0-9]+;base64,/,
+        "",
+      );
     }
   }
 
@@ -88,7 +92,7 @@ Ensure: sum(items[].price) ≈ subtotal, total = subtotal + tax + tip`,
   try {
     const result = await model.generateContent([imagePart]);
     const response = result.response;
-    
+
     if (!response.text()) {
       throw new Error("Empty response from AI");
     }
@@ -113,7 +117,7 @@ Ensure: sum(items[].price) ≈ subtotal, total = subtotal + tax + tip`,
   } catch (error) {
     console.error("Failed to parse receipt image:", error);
     throw new Error(
-      "AI could not process the receipt image. Ensure it's a clear receipt image and try again."
+      "AI could not process the receipt image. Ensure it's a clear receipt image and try again.",
     );
   }
 };
@@ -130,20 +134,19 @@ export const processChatCommand = async (
     : "";
 
   // Define schema for chat response
-  const chatSchema = {
-    type: "object",
+  const chatSchema: any = {
+    type: SchemaType.OBJECT,
     properties: {
       updatedAssignments: {
-        type: "object",
+        type: SchemaType.OBJECT,
         additionalProperties: {
-          type: "array",
-          items: { type: "string" },
+          type: SchemaType.ARRAY,
+          items: { type: SchemaType.STRING },
         },
       },
-      reply: { type: "string" },
+      reply: { type: SchemaType.STRING },
     },
     required: ["updatedAssignments", "reply"],
-    additionalProperties: false,
   };
 
   const model = ai.getGenerativeModel({
@@ -175,7 +178,7 @@ USER COMMAND: ${userMessage}`;
   try {
     const result = await model.generateContent(prompt);
     const response = result.response;
-    
+
     if (!response.text()) {
       throw new Error("Empty response from AI");
     }

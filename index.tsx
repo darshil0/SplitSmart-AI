@@ -1,6 +1,6 @@
 // src/index.tsx - SplitSmart AI Production Entry Point (v1.2.0)
 
-import { StrictMode } from "react";
+import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles/globals.css";
@@ -17,7 +17,10 @@ class AppErrorBoundary extends React.Component<
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): { hasError: true; error?: string } {
+  static getDerivedStateFromError(error: Error): {
+    hasError: true;
+    error?: string;
+  } {
     return { hasError: true, error: error.message };
   }
 
@@ -39,11 +42,22 @@ class AppErrorBoundary extends React.Component<
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-white/90 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-slate-200/50">
             <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-2xl flex items-center justify-center">
-              <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg
+                className="w-10 h-10 text-red-500"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-3 text-center">Oops!</h1>
+            <h1 className="text-2xl font-bold text-slate-900 mb-3 text-center">
+              Oops!
+            </h1>
             <p className="text-slate-600 mb-6 text-center leading-relaxed">
               Something unexpected happened while splitting your bill.
             </p>
@@ -55,7 +69,7 @@ class AppErrorBoundary extends React.Component<
                 🔄 Reload SplitSmart
               </button>
               <button
-                onClick={() => window.location.href = "/"}
+                onClick={() => (window.location.href = "/")}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-3 px-6 rounded-xl transition-all duration-200"
               >
                 🏠 New Receipt
@@ -92,12 +106,14 @@ const initApp = () => {
       <AppErrorBoundary>
         <App />
       </AppErrorBoundary>
-    </StrictMode>
+    </StrictMode>,
   );
 
   // Performance metrics
   if (import.meta.env.PROD && "performance" in window) {
-    console.log(`🚀 SplitSmart v1.2.0 loaded in ${performance.now().toFixed(0)}ms`);
+    console.log(
+      `🚀 SplitSmart v1.2.0 loaded in ${performance.now().toFixed(0)}ms`,
+    );
   }
 };
 
@@ -115,7 +131,7 @@ if (import.meta.env.DEV && import.meta.hot) {
           <AppErrorBoundary>
             <App />
           </AppErrorBoundary>
-        </StrictMode>
+        </StrictMode>,
       );
     }
   });

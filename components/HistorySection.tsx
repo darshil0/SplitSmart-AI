@@ -1,16 +1,13 @@
 import React from "react";
-import { 
-  HistoryEntry, 
-  CompleteHistoryState 
-} from "../types";
-import { 
-  Calendar, 
-  Users, 
-  ShoppingBag, 
-  Trash2, 
-  Clock, 
+import { CompleteHistoryState } from "../types";
+import {
+  Calendar,
+  Users,
+  ShoppingBag,
+  Trash2,
+  Clock,
   ArrowLeftRight,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 
 interface HistorySectionProps {
@@ -38,7 +35,8 @@ const HistorySection: React.FC<HistorySectionProps> = ({
           No splits saved yet
         </h3>
         <p className="text-slate-500 text-sm max-w-sm leading-relaxed mb-8">
-          Your bill splits will appear here automatically. Restore any split with one click.
+          Your bill splits will appear here automatically. Restore any split
+          with one click.
         </p>
         <div className="text-xs text-slate-400 font-mono bg-slate-100/50 px-4 py-2 rounded-xl border border-slate-200">
           Every change auto-saves
@@ -69,7 +67,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
             Clear All
           </button>
         </div>
-        
+
         {currentIndex >= 0 && (
           <div className="text-xs text-slate-500 font-mono bg-indigo-50/50 px-3 py-2 rounded-xl border border-indigo-200 mt-3">
             Current split: #{currentIndex + 1}
@@ -82,17 +80,15 @@ const HistorySection: React.FC<HistorySectionProps> = ({
         {history.map((entry, index) => {
           const date = new Date(entry.timestamp);
           const participants = Array.from(
-            new Set(
-              Object.values(entry.assignments).flat()
-            )
+            new Set(Object.values(entry.assignments).flat()),
           );
-          
+
           return (
             <div
               key={entry.timestamp.toString()}
               className={`group relative bg-white/70 backdrop-blur-sm border border-slate-200 hover:border-indigo-300 p-6 rounded-3xl shadow-lg hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-1 ${
-                index === currentIndex 
-                  ? "ring-4 ring-indigo-200/50 bg-indigo-50/50 border-indigo-300 shadow-indigo-500/20" 
+                index === currentIndex
+                  ? "ring-4 ring-indigo-200/50 bg-indigo-50/50 border-indigo-300 shadow-indigo-500/20"
                   : "hover:shadow-xl"
               }`}
             >
@@ -120,28 +116,32 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2 text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">
                     <Calendar size={12} />
-                    <time dateTime={date.toISOString().split('T')[0]}>
-                      {date.toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
+                    <time dateTime={date.toISOString().split("T")[0]}>
+                      {date.toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
                       })}
                     </time>
                     <span className="text-slate-500 font-mono text-[10px]">
-                      • {date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                      •{" "}
+                      {date.toLocaleTimeString([], {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-3xl font-black text-slate-900">
-                      {entry.receiptData.currency}
+                      {entry.receiptData?.currency || "$"}
                     </span>
                     <span className="text-2xl font-black text-slate-900">
-                      {entry.receiptData.total.toFixed(2)}
+                      {entry.receiptData?.total.toFixed(2) || "0.00"}
                     </span>
                   </div>
-                  
+
                   {index === currentIndex && (
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200 mt-1">
                       <TrendingUp size={12} />
@@ -173,7 +173,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                   </div>
                   <div>
                     <div className="text-2xl font-black text-slate-900">
-                      {entry.receiptData.items.length}
+                      {entry.receiptData?.items.length || 0}
                     </div>
                     <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                       Items

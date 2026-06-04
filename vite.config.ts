@@ -98,8 +98,8 @@ export default defineConfig(({ mode }) => {
     envPrefix: "VITE_",
 
     define: {
-      // FIX: version string updated to match package.json v1.3.0
-      __APP_VERSION__: JSON.stringify("1.3.0"),
+      // FIX: version string updated to match package.json v1.3.1
+      __APP_VERSION__: JSON.stringify("1.3.1"),
       __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
     },
   };

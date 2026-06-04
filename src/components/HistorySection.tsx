@@ -207,7 +207,10 @@ const HistorySection: React.FC<HistorySectionProps> = ({
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="flex items-center gap-3 p-3 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
                   <div className="bg-indigo-500/20 p-2 rounded-xl">
-                    <Users size={16} className="text-indigo-600 dark:text-indigo-400" />
+                    <Users
+                      size={16}
+                      className="text-indigo-600 dark:text-indigo-400"
+                    />
                   </div>
                   <div>
                     <div className="text-2xl font-black text-slate-900 dark:text-white">
@@ -221,7 +224,10 @@ const HistorySection: React.FC<HistorySectionProps> = ({
 
                 <div className="flex items-center gap-3 p-3 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800 hover:border-emerald-200 dark:hover:border-emerald-700 transition-colors">
                   <div className="bg-emerald-500/20 p-2 rounded-xl">
-                    <ShoppingBag size={16} className="text-emerald-600 dark:text-emerald-400" />
+                    <ShoppingBag
+                      size={16}
+                      className="text-emerald-600 dark:text-emerald-400"
+                    />
                   </div>
                   <div>
                     <div className="text-2xl font-black text-slate-900 dark:text-white">

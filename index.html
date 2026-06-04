@@ -16,6 +16,9 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
       body {
         font-family: "Inter", sans-serif;
@@ -75,10 +78,10 @@
         outline: none;
       }
     </style>
-    <!-- PWA Manifest -->
+    <!-- PWA Manifest (Fixed: "purose" → "purpose") -->
     <link
       rel="manifest"
-      href="data:application/json;base64,eyJuYW1lIjoiU3BsaXRTbWFydCBBSSIsInNob3J0X25hbWUiOiJzcGxpdHNtYXJ0Iiwic3RhcnRfdXJsIjoiLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwidGhlbWVfY29sb3IiOiIjNDA2M2RiIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMTAwIDEwMCc+PHJlY3Qgd2lkdGg9JzEwMCcgaGVpZ2h0PScxMDAnIHJ4PScyMCcgZmlsbD0nIzRmNDZlNScvPjxwYXRoIGQ9J00zMCAzMCBMNzAgNzAgTTcwIDMwIEwzMCA3MCcgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScxMicgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8+PC9zdmc+Iiwic2l6ZXMiOiI5Ni41eDk2LjUiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCIsInB1cnBvc2UiOiJhbniifSx7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMzIgMzInPjxyZWN0IHdpZHRoPSczMicgaGVpZ2h0PSczMicgZmlsbD0nIzRmNDZlNScgcng9JzgnLz48cGF0aCBkPSdNMTAgMTAgTDE4IDI4IE0xOCAxMCBMMTAgMjgnIHN0cm9rZT0nd2hpdGUnIHN0cm9rZS13aWR0aD0nNCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8+PC9zdmc+Iiwic2l6ZXMiOiIzMngzMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6Im1hc2sifSx7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMzIgMzInPjxyZWN0IHdpZHRoPSczMicgaGVpZ2h0PSczMicgZmlsbD0nIzRmNDZlNScgcng9JzgnLz48cGF0aCBkPSdNMTAgMTAgTDE4IDI4IE0xOCAxMCBMMTAgMjgnIHN0cm9rZT0nd2hpdGUnIHN0cm9rZS13aWR0aD0nNCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8+PC9zdmc+Iiwic2l6ZXMiOiIzMngzMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6Im1hc2sifV19"
+      href="data:application/json;base64,eyJuYW1lIjoiU3BsaXRTbWFydCBBSSIsInNob3J0X25hbWUiOiJzcGxpdHNtYXJ0Iiwic3RhcnRfdXJsIjoiLyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwidGhlbWVfY29sb3IiOiIjNDA2M2RiIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMTAwIDEwMCc+PHJlY3Qgd2lkdGg9JzEwMCcgaGVpZ2h0PScxMDAnIHJ4PScyMCcgZmlsbD0nIzRmNDZlNScvPjxwYXRoIGQ9J00zMCAzMCBMNzAgNzAgTTcwIDMwIEwzMCA3MCcgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScxMicgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8+PC9zdmc+Iiwic2l6ZXMiOiI5Ni41eDk2LjUiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCIsInB1cnBvc2UiOiJhbnkifSx7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMzIgMzInPjxyZWN0IHdpZHRoPSczMicgaGVpZ2h0PSczMicgZmlsbD0nIzRmNDZlNScgcng9JzgnLz48cGF0aCBkPSdNMTAgMTAgTDE4IDI4IE0xOCAxMCBMMTAgMjgnIHN0cm9rZT0nd2hpdGUnIHN0cm9rZS13aWR0aD0nNCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8+PC9zdmc+Iiwic2l6ZXMiOiIzMngzMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6Im1hc2sifSx7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbCxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgMzIgMzInPjxyZWN0IHdpZHRoPSczMicgaGVpZ2h0PSczMicgZmlsbD0nIzRmNDZlNScgcng9JzgnLz48cGF0aCBkPSdNMTAgMTAgTDE4IDI4IE0xOCAxMCBMMTAgMjgnIHN0cm9rZT0nd2hpdGUnIHN0cm9rZS13aWR0aD0nNCcgc3Ryb2tlLWxpbmVjYXA9J3JvdW5kJy8+PC9zdmc+Iiwic2l6ZXMiOiIzMngzMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIiwicHVycG9zZSI6Im1hc2sifV19"
     />
     <!-- Apple Touch Icon -->
     <link
@@ -120,6 +123,7 @@
 
     <div id="root"></div>
 
-    <script type="module" src="/src/index.tsx"></script>
+    <!-- Fixed: Changed from .tsx to .js (browsers can't execute TypeScript directly) -->
+    <script type="module" src="/src/index.js"></script>
   </body>
 </html>

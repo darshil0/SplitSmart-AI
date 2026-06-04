@@ -269,12 +269,18 @@ const ReceiptDisplay: React.FC<ReceiptDisplayProps> = ({
 
   const getCategoryIcon = (category?: string) => {
     switch (category) {
-      case "Food": return <Utensils size={14} />;
-      case "Drink": return <Coffee size={14} />;
-      case "Alcohol": return <Wine size={14} />;
-      case "Service": return <Sparkles size={14} />;
-      case "Tax": return <Tag size={14} />;
-      default: return <ReceiptIcon size={14} />;
+      case "Food":
+        return <Utensils size={14} />;
+      case "Drink":
+        return <Coffee size={14} />;
+      case "Alcohol":
+        return <Wine size={14} />;
+      case "Service":
+        return <Sparkles size={14} />;
+      case "Tax":
+        return <Tag size={14} />;
+      default:
+        return <ReceiptIcon size={14} />;
     }
   };
 

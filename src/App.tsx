@@ -181,8 +181,7 @@ const App: React.FC = () => {
       const saved = localStorage.getItem("splitSmartTheme");
       return (
         saved === "dark" ||
-        (!saved &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
+        (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)
       );
     }
     return false;
@@ -308,25 +307,22 @@ const App: React.FC = () => {
     setIsCurrentSplitSaved(true);
   }, []);
 
-  const handleDeleteHistoryEntry = useCallback(
-    (id: string) => {
-      // `id` is the snapshot's timestamp (stringified)
-      const targetTs = parseInt(id, 10);
-      setHistory((prev) => {
-        const idx = prev.findIndex((s) => s.timestamp === targetTs);
-        if (idx === -1) return prev;
-        const next = prev.filter((_, i) => i !== idx);
-        // Adjust historyIndex so it remains valid
-        setHistoryIndex((ci) => {
-          if (ci > idx) return ci - 1;
-          if (ci === idx) return Math.max(0, idx - 1);
-          return ci;
-        });
-        return next;
+  const handleDeleteHistoryEntry = useCallback((id: string) => {
+    // `id` is the snapshot's timestamp (stringified)
+    const targetTs = parseInt(id, 10);
+    setHistory((prev) => {
+      const idx = prev.findIndex((s) => s.timestamp === targetTs);
+      if (idx === -1) return prev;
+      const next = prev.filter((_, i) => i !== idx);
+      // Adjust historyIndex so it remains valid
+      setHistoryIndex((ci) => {
+        if (ci > idx) return ci - 1;
+        if (ci === idx) return Math.max(0, idx - 1);
+        return ci;
       });
-    },
-    [],
-  );
+      return next;
+    });
+  }, []);
 
   const handleShareSession = useCallback(() => {
     if (!receiptData) return;
@@ -798,8 +794,7 @@ const App: React.FC = () => {
             {/* Chat */}
             <div
               className={`overflow-hidden flex flex-col ${
-                activeMobileTab === "summary" ||
-                activeMobileTab === "history"
+                activeMobileTab === "summary" || activeMobileTab === "history"
                   ? "hidden lg:flex"
                   : "flex"
               }`}
@@ -857,7 +852,10 @@ const App: React.FC = () => {
           <div className="bg-white/95 p-12 rounded-3xl shadow-2xl border border-slate-200 flex flex-col items-center gap-6 max-w-sm text-center">
             <div className="relative">
               <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center">
-                <ReceiptIcon size={32} className="text-indigo-600 animate-pulse" />
+                <ReceiptIcon
+                  size={32}
+                  className="text-indigo-600 animate-pulse"
+                />
               </div>
               <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 border-4 border-white rounded-full animate-ping"></div>
             </div>
@@ -909,7 +907,9 @@ const App: React.FC = () => {
                       className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          const name = (e.target as HTMLInputElement).value.trim();
+                          const name = (
+                            e.target as HTMLInputElement
+                          ).value.trim();
                           if (name) {
                             setSavedGroups((prev) => [
                               ...prev,
@@ -926,9 +926,8 @@ const App: React.FC = () => {
                     />
                     <button
                       onClick={(e) => {
-                        const input = (
-                          e.currentTarget.previousSibling as HTMLInputElement
-                        );
+                        const input = e.currentTarget
+                          .previousSibling as HTMLInputElement;
                         const name = input.value.trim();
                         if (name) {
                           setSavedGroups((prev) => [
@@ -978,9 +977,7 @@ const App: React.FC = () => {
                             setExtraParticipants((prev) => [
                               ...new Set([...prev, ...group.participants]),
                             ]);
-                            alert(
-                              `Group "${group.name}" participants added!`,
-                            );
+                            alert(`Group "${group.name}" participants added!`);
                             setShowGroupsModal(false);
                           }}
                           className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"

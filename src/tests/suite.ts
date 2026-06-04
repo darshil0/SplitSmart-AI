@@ -141,7 +141,9 @@ export const runTestSuite = async (
           {},
           "EQUAL",
         );
-        if (Math.abs(result["Solo"]!.totalOwed - MOCK_RECEIPT.subtotal) > 0.01) {
+        if (
+          Math.abs(result["Solo"]!.totalOwed - MOCK_RECEIPT.subtotal) > 0.01
+        ) {
           throw new Error("Single person doesn't owe full subtotal");
         }
       },

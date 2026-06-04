@@ -38,7 +38,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [inputValue]);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
   }, []);
 
   useEffect(() => {
@@ -173,7 +176,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   className="w-full max-w-sm flex items-center gap-3 p-3 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-200 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:opacity-50"
                   disabled={disabled}
                 >
-                  <Sparkles size={14} className="text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
+                  <Sparkles
+                    size={14}
+                    className="text-indigo-500 dark:text-indigo-400 flex-shrink-0"
+                  />
                   "{example}"
                 </button>
               ))}
@@ -223,16 +229,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {isProcessing && (
           <div className="flex items-start gap-3 animate-in fade-in duration-500">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-lg flex items-center justify-center flex-shrink-0">
-              <Sparkles size={16} className="text-slate-600 dark:text-slate-400 animate-pulse" />
+              <Sparkles
+                size={16}
+                className="text-slate-600 dark:text-slate-400 animate-pulse"
+              />
             </div>
             <div className="bg-white/80 dark:bg-slate-800 border border-slate-100/50 dark:border-slate-700 p-5 rounded-3xl rounded-tr-2xl shadow-xl backdrop-blur-sm max-w-[75%]">
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-indigo-200 dark:bg-indigo-900 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                  <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                  <div
+                    className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  ></div>
                 </div>
-                <span className="text-sm font-medium text-slate-600">Processing...</span>
+                <span className="text-sm font-medium text-slate-600">
+                  Processing...
+                </span>
               </div>
               {onStop && (
                 <button
@@ -295,10 +312,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {isInputFocused && (
           <div className="mt-2 flex gap-3 text-[10px] text-slate-400 font-mono">
             <span>
-              <kbd className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Ctrl+Enter</kbd> Send
+              <kbd className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                Ctrl+Enter
+              </kbd>{" "}
+              Send
             </span>
             <span>
-              <kbd className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Esc</kbd> Clear
+              <kbd className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                Esc
+              </kbd>{" "}
+              Clear
             </span>
           </div>
         )}

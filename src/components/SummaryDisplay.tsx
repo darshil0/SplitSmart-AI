@@ -317,8 +317,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   const chartData = summary.map((p, index) => ({
     name: p.name,
     value: p.totalOwed,
-    color:
-      p.name === "Unassigned" ? "#cbd5e1" : COLORS[index % COLORS.length],
+    color: p.name === "Unassigned" ? "#cbd5e1" : COLORS[index % COLORS.length],
   }));
 
   return (
@@ -519,11 +518,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
                 <button
                   onClick={() =>
                     window.open(
-                      getPaymentLink(
-                        person.name,
-                        person.totalOwed,
-                        "cashapp",
-                      ),
+                      getPaymentLink(person.name, person.totalOwed, "cashapp"),
                       "_blank",
                     )
                   }

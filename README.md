@@ -17,11 +17,11 @@ A modern, split-screen bill splitting application powered by Google's Gemini 1.5
 - **Undo/Redo Support**: Full history navigation with keyboard shortcuts (Cmd+Z/Cmd+Y on Mac, Ctrl+Z/Ctrl+Y on Windows/Linux)
 - **Flexible Tax/Tip Splitting**: Choose from three distribution methods
 
-| Method | Description |
-|--------|-------------|
+| Method           | Description                                              |
+| ---------------- | -------------------------------------------------------- |
 | **PROPORTIONAL** | Tax/tip distributed based on each person's item subtotal |
-| **EQUAL** | Tax/tip divided evenly among all participants |
-| **MANUAL** | Assign custom tax/tip amounts per item |
+| **EQUAL**        | Tax/tip divided evenly among all participants            |
+| **MANUAL**       | Assign custom tax/tip amounts per item                   |
 
 ## 🚀 What's New in v1.3.1
 
@@ -167,8 +167,13 @@ Gemini 1.5 Pro extracts the following structured data:
   "venue": "Olive Garden",
   "date": "2025-06-04",
   "items": [
-    { "name": "Fettuccine Alfredo", "price": 18.99, "category": "Food", "quantity": 1 },
-    { "name": "Iced Tea", "price": 3.50, "category": "Drink", "quantity": 2 }
+    {
+      "name": "Fettuccine Alfredo",
+      "price": 18.99,
+      "category": "Food",
+      "quantity": 1
+    },
+    { "name": "Iced Tea", "price": 3.5, "category": "Drink", "quantity": 2 }
   ],
   "subtotal": 22.49,
   "tax": 1.79,
@@ -211,6 +216,7 @@ npm run test
 ### API Key Issues
 
 **Error: "API key not valid"**
+
 - Verify your key is correct in `.env.local`
 - Ensure the key is enabled in Google AI Studio
 - Check that you haven't committed the key to version control by accident
